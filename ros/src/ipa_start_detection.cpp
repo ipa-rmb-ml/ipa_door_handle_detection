@@ -9,6 +9,8 @@ StartHandleDetection::StartHandleDetection(ros::NodeHandle nh, sensor_msgs::Poin
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
 	filePathXYZRGB_ = PATH_TO_DIR + "/templateDataPCAXYZRGB/"; // only for testing -> change later
+	filePathNormals_ = PATH_TO_DIR + "/templateDataNormals/"; 
+	filePathFeatures_ = PATH_TO_DIR + "/templateDataFeatures/";
 	filePathPCATransformations_ = PATH_TO_DIR +"/templateDataPCATrafo/";
 	filePathBBInformations_ = PATH_TO_DIR +"/templateDataBB/";
 
@@ -147,13 +149,23 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 
 
 
+
+
+
+
 			// ====================CHANGE TO PCAs BOUNDING BOX CRIT ==================================
 
 			cluster_pca_best_vec.push_back(cluster_pca); // so
 
 			std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
 			Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > template_vec_xyz = featureObj.loadGeneratedTemplatePCLXYZ(filePathXYZRGB_);
-
+												// 2. normals
+			std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr,
+			Eigen::aligned_allocator<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> > template_vec_features = featureObj.loadGeneratedTemplatePCLFeatures(filePathFeatures_);
+														// 3. features
+			std::vector<pcl::PointCloud<pcl::Normal>::Ptr,
+			Eigen::aligned_allocator<pcl::PointCloud<pcl::Normal>::Ptr> >template_vec_normals = featureObj.loadGeneratedTemplatePCLNormals(filePathNormals_);
+														// 4. PCA
 			std::vector<Eigen::Matrix4f> template_pca_trafo_vec = featureObj.loadGeneratedPCATransformations(filePathPCATransformations_);
 	
 			std::vector<Eigen::Vector3f> template_BB_3D = featureObj.loadGeneratedBBInformation(filePathBBInformations_);

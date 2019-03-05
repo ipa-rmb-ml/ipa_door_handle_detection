@@ -6,9 +6,9 @@
 DoorHandleTemplateGeneration::DoorHandleTemplateGeneration(std::string file_path_to_point_clouds )
 {
 
-	TEMPLATE_PATH_ 		= "/home/rmb-ml/Desktop/PointCloudData";
+	TEMPLATE_PATH_ 		= "/home/robot/Desktop/rmb-ml/TemplateDatabase";
 	targetPathXYZRGB_  	= TEMPLATE_PATH_ + "/templateDataXYZRGB/";
-	targetPathPCA_ 		= TEMPLATE_PATH_ + "/templateDataPCA/";
+	targetPathPCA_ 		= TEMPLATE_PATH_ + "/templateDataPCAXYZRGB/";
 	targetPathEigen_	= TEMPLATE_PATH_ + "/templateDataPCATrafo/";
 	targetPathBB_ 		= TEMPLATE_PATH_ + "/templateDataBB/";
 
@@ -152,14 +152,14 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 						std::cout << "Writing XYZ..." << std::endl;
 						pcl::io::savePCDFileASCII (filePathPCDWriteXYZRGB,*template_cloud_reduced);
 
-						//std::cout << "Writing Normals..." << std::endl;
-						//pcl::io::savePCDFileASCII (filePathPCDWriteNormals,*template_cloud_normals);
+						std::cout << "Writing Normals..." << std::endl;
+						pcl::io::savePCDFileASCII (filePathPCDWriteNormals,*template_cloud_normals);
 
 						std::cout << "Writing PCA Data..." << std::endl;
 						pcl::io::savePCDFileASCII (filePathPCDWritePCAXYZ,*template_cloud_pca);
 
-						//std::cout << "Writing Features..." << std::endl;	
-						//pcl::io::savePCDFileASCII (filePathPCDWriteFeatures,*template_cloud_features);
+						std::cout << "Writing Features..." << std::endl;	
+						pcl::io::savePCDFileASCII (filePathPCDWriteFeatures,*template_cloud_features);
 
 						std::cout << "Writing PCA Transformation..." << std::endl;	
 						std::ofstream fout_pca;
@@ -192,6 +192,11 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
         } //end while
         closedir(pDIR);
     } //end if
+    else
+    {
+    ROS_WARN("Check directory path");
+    }
+	
 }
 
 

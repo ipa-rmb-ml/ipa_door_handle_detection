@@ -3,7 +3,6 @@
 #include "ipa_door_handle_segmentation.h"
 
 
-
 #include <stdio.h>
 #include <sys/select.h>
 #include <termios.h>
@@ -74,7 +73,7 @@ std::string DoorhandleDatabaseGeneration::getFilePathFromParameter(int dist, int
 		std::string angle_2_str = str2.str();
 		std::string dist_str = str3.str();
 
-		std::string name_pcd  = "_distance_" + dist_str + "cm_" + "angleXZ_" + angle_1_str + "°_" + "angleYZ_"+ angle_2_str + "°.pcd";
+		std::string name_pcd  = "_distance_" + dist_str + "cm_" + "angleXZ_" + 	angle_1_str + "°_" + "angleYZ_"+ angle_2_str + "°.pcd";
 
 		return name_pcd;
 }
