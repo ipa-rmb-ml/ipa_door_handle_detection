@@ -63,8 +63,6 @@ Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > generateTempl
 private:
 
 std::string targetPathXYZRGB_;
-std::string targetPathNormals_;
-std::string targetPathFeatures_;
 std::string targetPathPCA_;
 std::string targetPathEigen_;
 std::string targetPathBB_;

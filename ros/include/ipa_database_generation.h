@@ -50,7 +50,7 @@
 // definition
 #define TOPIC_POINT_CLOUD "/pico/flexx/points"  //ROS topic point cloud
 #define TOPIC_POINT_CLOUD_PATCH "/selected_patch" //ROS topic selected patch 
-#define PATH_TO_DIR "test"
+#define PATH_TO_DIR "/home/robot/Desktop/rmb-ml/"
 
 class DoorhandleDatabaseGeneration
 {
