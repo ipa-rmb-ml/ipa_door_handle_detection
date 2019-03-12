@@ -3,16 +3,19 @@
 #include "ipa_door_handle_segmentation.h"
 #include "ipa_door_handle_template_alignment.h"
 
+#define TOPIC_POINT_CLOUD_IN "test"
+#define TOPIC_POINT_CLOUD_OUT "test"
 
 
 StartHandleDetection::StartHandleDetection(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg) :
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
-	filePathXYZRGB_ = POINT_CLOUD_TEMPLATE_PATH + "/templateDataPCAXYZRGB/"; // only for testing -> change later
-	//filePathNormals_ = POINT_CLOUD_TEMPLATE_PATH + "/templateDataNormals/"; 
-	//filePathFeatures_ = POINT_CLOUD_TEMPLATE_PATH + "/templateDataFeatures/";
-	filePathPCATransformations_ = POINT_CLOUD_TEMPLATE_PATH +"/templateDataPCATrafo/";
-	filePathBBInformations_ = POINT_CLOUD_TEMPLATE_PATH +"/templateDataBB/";
+	std::string camera_link = "test" ;
+	std::string PATH_TO_TEMPLATE_DIR = "test";
+
+	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataPCAXYZRGB/"; // only for testing -> change later
+	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/";
+	filePathBBInformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataBB/";
 
 	// correspondence estimation function
 	max_dist_1_ = 0.01; //first crit
@@ -142,14 +145,7 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 			// MODEL001 | MODEL002 | MODEL003 | 
 			// check BB3D from PCA and decide ->iterate over templates or not?
 
-			// for each possible model --> store vector with infotmation (translation err, fitness_score, ratio) -> select best fit
-
-
-
-
-
-
-
+			// for each possible model --> store vector with infotmation (translation err, fitness_score, ratio) -> select best fi
 
 
 
@@ -180,8 +176,8 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 				{
 					if (cluster_vec[num_cluster]->points.size() > 0)
 					   {	
-							pcl::PointCloud<pcl::Normal>::Ptr template_normals = template_vec_normals[num_template];
-							pcl::PointCloud<pcl::FPFHSignature33>::Ptr template_features = template_vec_features[num_template];
+							//pcl::PointCloud<pcl::Normal>::Ptr template_normals = template_vec_normals[num_template];
+							//pcl::PointCloud<pcl::FPFHSignature33>::Ptr template_features = template_vec_features[num_template];
 							// already tranformed appling PCA
 							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca = template_vec_xyz[num_template];
 							Eigen::Matrix4f pca_template =	 template_pca_trafo_vec[num_template]; // rotation and translatoion to origin

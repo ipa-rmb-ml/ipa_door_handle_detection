@@ -8,6 +8,12 @@
 #include <termios.h>
 #include <stropts.h>
 
+
+
+// definition
+#define TOPIC_POINT_CLOUD_GEN "/pico_flexx/points"  //ROS topic point cloud
+#define TOPIC_POINT_CLOUD_PATCH "/selected_patch" //ROS topic selected patch 
+
 DoorhandleDatabaseGeneration::DoorhandleDatabaseGeneration(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg) :
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
@@ -235,7 +241,7 @@ void DoorhandleDatabaseGeneration::initCameraNode(ros::NodeHandle nh, sensor_msg
 	pub_ = nh_.advertise<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD,1);
 	(pub_) ? std::cout << "Pub is valid." << std::endl : std::cout << "Pub is not valid." << std::endl;
 
-	ros::Subscriber point_cloud_sub_1_ = nh_.subscribe<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD, 1, &DoorhandleDatabaseGeneration::pointcloudCallback_1, this);
+	ros::Subscriber point_cloud_sub_1_ = nh_.subscribe<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_GEN, 1, &DoorhandleDatabaseGeneration::pointcloudCallback_1, this);
 
 	ros::Subscriber point_cloud_sub_2_ = nh_.subscribe<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_PATCH, 1, &DoorhandleDatabaseGeneration::pointcloudCallback_2, this);
 

@@ -47,11 +47,6 @@
 #include "sensor_msgs/Image.h"
 
 
-// definition
-#define TOPIC_POINT_CLOUD "/pico_flexx/points"  //ROS topic point cloud
-#define TOPIC_POINT_CLOUD_PATCH "/selected_patch" //ROS topic selected patch 
-#define PATH_TO_DIR "/home/robot/Desktop/rmb-ml/PointCloudDataBase/" 
-
 class DoorhandleDatabaseGeneration
 {
 public:
