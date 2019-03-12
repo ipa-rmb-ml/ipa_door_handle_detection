@@ -8,11 +8,11 @@
 StartHandleDetection::StartHandleDetection(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg) :
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
-	filePathXYZRGB_ = PATH_TO_DIR + "/templateDataPCAXYZRGB/"; // only for testing -> change later
-	filePathNormals_ = PATH_TO_DIR + "/templateDataNormals/"; 
-	filePathFeatures_ = PATH_TO_DIR + "/templateDataFeatures/";
-	filePathPCATransformations_ = PATH_TO_DIR +"/templateDataPCATrafo/";
-	filePathBBInformations_ = PATH_TO_DIR +"/templateDataBB/";
+	filePathXYZRGB_ = POINT_CLOUD_TEMPLATE_PATH + "/templateDataPCAXYZRGB/"; // only for testing -> change later
+	//filePathNormals_ = POINT_CLOUD_TEMPLATE_PATH + "/templateDataNormals/"; 
+	//filePathFeatures_ = POINT_CLOUD_TEMPLATE_PATH + "/templateDataFeatures/";
+	filePathPCATransformations_ = POINT_CLOUD_TEMPLATE_PATH +"/templateDataPCATrafo/";
+	filePathBBInformations_ = POINT_CLOUD_TEMPLATE_PATH +"/templateDataBB/";
 
 	// correspondence estimation function
 	max_dist_1_ = 0.01; //first crit
@@ -160,11 +160,12 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 			std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
 			Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > template_vec_xyz = featureObj.loadGeneratedTemplatePCLXYZ(filePathXYZRGB_);
 												// 2. normals
-			std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr,
-			Eigen::aligned_allocator<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> > template_vec_features = featureObj.loadGeneratedTemplatePCLFeatures(filePathFeatures_);
+			//std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr,
+			//Eigen::aligned_allocator<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> > template_vec_features = featureObj.loadGeneratedTemplatePCLFeatures(filePathFeatures_);
 														// 3. features
-			std::vector<pcl::PointCloud<pcl::Normal>::Ptr,
-			Eigen::aligned_allocator<pcl::PointCloud<pcl::Normal>::Ptr> >template_vec_normals = featureObj.loadGeneratedTemplatePCLNormals(filePathNormals_);
+			//std::vector<pcl::PointCloud<pcl::Normal>::Ptr,
+			//Eigen::aligned_allocator<pcl::PointCloud<pcl::Normal>::Ptr> >template_vec_normals = featureObj.loadGeneratedTemplatePCLNormals(filePathNormals_);
+
 														// 4. PCA
 			std::vector<Eigen::Matrix4f> template_pca_trafo_vec = featureObj.loadGeneratedPCATransformations(filePathPCATransformations_);
 	

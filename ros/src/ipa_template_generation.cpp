@@ -6,7 +6,7 @@
 DoorHandleTemplateGeneration::DoorHandleTemplateGeneration(std::string file_path_to_point_clouds )
 {
 
-	TEMPLATE_PATH_ 		= "/home/robot/Desktop/rmb-ml/TemplateDatabase";
+	TEMPLATE_PATH_ 		= "/home/robot/Desktop/rmb-ml/TemplateDataBase";
 	targetPathXYZRGB_  	= TEMPLATE_PATH_ + "/templateDataXYZRGB/";
 	targetPathPCA_ 		= TEMPLATE_PATH_ + "/templateDataPCAXYZRGB/";
 	targetPathEigen_	= TEMPLATE_PATH_ + "/templateDataPCATrafo/";
@@ -98,8 +98,8 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 			{
 			std::string filePathPCDRead = file_path_to_point_clouds + entry->d_name;
 			std::string filePathPCDWriteXYZRGB = targetPathXYZRGB_ + entry->d_name;
-			std::string filePathPCDWriteNormals = targetPathNormals_ + entry->d_name;
-			std::string filePathPCDWriteFeatures = targetPathFeatures_ + entry->d_name;
+			//std::string filePathPCDWriteNormals = targetPathNormals_ + entry->d_name;
+			//std::string filePathPCDWriteFeatures = targetPathFeatures_ + entry->d_name;
 			std::string filePathPCDWritePCAXYZ = targetPathPCA_ + entry->d_name;
 
 			boost::filesystem::path p(filePathPCDRead);
@@ -112,6 +112,9 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 					{
 						PCL_ERROR ("Couldn't read PCD file. \n");
 					}
+
+
+
 			planeInformation planeData = seg.detectPlaneInPointCloud(template_cloud);
 
 			// change color of template cloud
@@ -122,7 +125,8 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 			template_cloud_reduced=seg.minimizePointCloudToObject(template_cloud,plane_pc_indices,plane_coeff);
 			template_cloud_reduced_rgb = seg.changePointCloudColor(template_cloud_reduced);
 
-				if (template_cloud_reduced->size() > 0)
+
+				if (template_cloud_reduced_rgb->points.size() > 0)
 					{
 					door_handle_cluster=seg.findClustersByRegionGrowing(template_cloud_reduced_rgb);
 					// only one object suppose to be the handle
@@ -152,14 +156,14 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 						std::cout << "Writing XYZ..." << std::endl;
 						pcl::io::savePCDFileASCII (filePathPCDWriteXYZRGB,*template_cloud_reduced);
 
-						std::cout << "Writing Normals..." << std::endl;
-						pcl::io::savePCDFileASCII (filePathPCDWriteNormals,*template_cloud_normals);
+						//std::cout << "Writing Normals..." << std::endl;
+						//pcl::io::savePCDFileASCII (filePathPCDWriteNormals,*template_cloud_normals);
 
 						std::cout << "Writing PCA Data..." << std::endl;
 						pcl::io::savePCDFileASCII (filePathPCDWritePCAXYZ,*template_cloud_pca);
 
-						std::cout << "Writing Features..." << std::endl;	
-						pcl::io::savePCDFileASCII (filePathPCDWriteFeatures,*template_cloud_features);
+						//std::cout << "Writing Features..." << std::endl;	
+						//pcl::io::savePCDFileASCII (filePathPCDWriteFeatures,*template_cloud_features);
 
 						std::cout << "Writing PCA Transformation..." << std::endl;	
 						std::ofstream fout_pca;
@@ -203,7 +207,7 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 // =================================================0
 int main(int argc, char **argv)
 {		
-	std::string file_path_to_point_clouds = "/home/rmb-ml/Desktop/PointCloudData/unprocessed/";
+	std::string file_path_to_point_clouds = "/home/robot/Desktop/rmb-ml/TemplateDataBase/RAW/";
 	DoorHandleTemplateGeneration DoorHandleTemplateGeneration(file_path_to_point_clouds);
 
 	return 0;

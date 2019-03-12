@@ -36,8 +36,13 @@
 
 #include <boost/thread/mutex.hpp>
 
-#define TOPIC_POINT_CLOUD_IN "/pico/flexx/points"
+
+// definition of the settings for the camera --> might be adapted --> read in from TXT file
+
+#define TOPIC_POINT_CLOUD_IN "/pico_flexx/points"
 #define TOPIC_POINT_CLOUD_OUT "/point_cloud_output"
+#define POINT_CLOUD_TEMPLATE_PATH "/home/robot/Desktop/rmb-ml"
+#define CAMERA_LINK ""
 
 // creates vector with pointclouds where each represents a cluster idintified by region growing
 class StartHandleDetection
@@ -49,9 +54,6 @@ public:
 	void initCameraNode(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg);
 
 	void pointcloudCallback(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg);	
-
-	std::string CAMERA_LINK;
-	std::string PATH_TO_DIR;
 
 private:
 	ros::Publisher pub_;

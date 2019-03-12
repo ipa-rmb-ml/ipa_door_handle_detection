@@ -135,6 +135,7 @@ void DoorhandleDatabaseGeneration::pointcloudCallback_2(const sensor_msgs::Point
 						}
 							ROS_WARN("Writing point cloud to pcd file...");
 							//std::cout<<path_type<<std::endl;
+							std::cout<<point_cloud->points.size()<<std::endl;
 							pcl::io::savePCDFileASCII (path_type,*point_cloud);	
 
 					break;
@@ -210,6 +211,7 @@ void DoorhandleDatabaseGeneration::pointcloudCallback_1(const sensor_msgs::Point
 			std::cout<<"angle_xz: " << std::endl;
 			std::cout<<"angle_yz: " << std::endl;
 			std::cout<<"distance: " << std::endl;
+
 		}
 
 		else

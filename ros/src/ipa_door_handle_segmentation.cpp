@@ -7,7 +7,7 @@ PointCloudSegmentation::PointCloudSegmentation()
 {
 
 // filter points by distance
-min_point_to_plane_dist_ = 0.03;//m
+min_point_to_plane_dist_ = 0.01;//m
 max_point_to_plane_dist_ = 0.1;
 
 // filter points by door handle height
@@ -123,7 +123,8 @@ planeInformation PointCloudSegmentation::detectPlaneInPointCloud(pcl::PointCloud
 };
 
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::minimizePointCloudToObject(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointIndices::Ptr plane_pc_indices,pcl::ModelCoefficients::Ptr plane_coeff){
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::minimizePointCloudToObject(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointIndices::Ptr plane_pc_indices,pcl::ModelCoefficients::Ptr plane_coeff)
+{
 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr reduced_pc(new pcl::PointCloud<pcl::PointXYZRGB>);
 	// calculate point to plane distance
@@ -135,20 +136,23 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::minimizePointClou
 		pp_PC.y = input_cloud->points[i].y;
 		pp_PC.z = input_cloud->points[i].z;
 
+std::cout<<pp_PC.z<<std::endl;
+
 			// storing and coloring data from only outside the plane
-		double point2plane_distance =  pcl::pointToPlaneDistance (pp_PC, plane_coeff->values[0], plane_coeff->values[1], plane_coeff->values[2], plane_coeff->values[3]);
+		//double point2plane_distance =  pcl::pointToPlaneDistance (pp_PC, plane_coeff->values[0], plane_coeff->values[1], plane_coeff->values[2], plane_coeff->values[3]);
 
 		// add DIN information to ppoint handle
 		// take only values in front of the door
-		if ( pp_PC.z < plane_coeff->values[3])
+
+		//if (pp_PC.z < plane_coeff->values[3])
 		{
-			if ((point2plane_distance > min_point_to_plane_dist_) && (point2plane_distance < max_point_to_plane_dist_))
+			//if ((abs(pp_PC.z - plane_coeff->values[3]) > min_point_to_plane_dist_) && ((abs(pp_PC.z - plane_coeff->values[3])  < max_point_to_plane_dist_))
 			{
-						pp_PC.r = 0;																								
+						pp_PC.r = 0;																
 						pp_PC.b = 255;
 						pp_PC.g =0;							
 						reduced_pc->points.push_back(pp_PC);				
-				}
+			}
 		}
 	}
 	return reduced_pc;
