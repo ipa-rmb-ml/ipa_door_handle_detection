@@ -9,10 +9,10 @@
 #include <stropts.h>
 
 
-
 // definition
 #define TOPIC_POINT_CLOUD_GEN "/pico_flexx/points"  //ROS topic point cloud
 #define TOPIC_POINT_CLOUD_PATCH "/selected_patch" //ROS topic selected patch 
+#define PATH_TO_DIR "/home/robot/Desktop/rmb-ml/PointCloudDataBase/" // Path to store patches
 
 DoorhandleDatabaseGeneration::DoorhandleDatabaseGeneration(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg) :
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
@@ -24,9 +24,9 @@ nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 std::string DoorhandleDatabaseGeneration::getFilePathFromParameter(int dist, int angle_XZ, int angle_YZ)
 {
 
-		int distances[] = {45-dist,55-dist,70-dist,90-dist};
+		int distances[] = {40-dist,55-dist,70-dist};
 
-		int angle_xz[] = {-60-angle_XZ,-40-angle_XZ,-20-angle_XZ,0-angle_XZ,20-angle_XZ,40-angle_XZ,60-angle_XZ}; //deg
+		int angle_xz[] = {-10-angle_XZ,0-angle_XZ,10-angle_XZ}; //deg
 
 		int angle_yz[] = {0-angle_YZ,5-angle_YZ}; // deg
 
@@ -142,7 +142,8 @@ void DoorhandleDatabaseGeneration::pointcloudCallback_2(const sensor_msgs::Point
 							ROS_WARN("Writing point cloud to pcd file...");
 							//std::cout<<path_type<<std::endl;
 							std::cout<<point_cloud->points.size()<<std::endl;
-							pcl::io::savePCDFileASCII (path_type,*point_cloud);	
+							pcl::io::savePCDFileASCII (path_type,*point_cloud);
+							std::cout<<point_cloud->points.size()<<std::endl;
 
 					break;
 				}
@@ -238,7 +239,7 @@ void DoorhandleDatabaseGeneration::initCameraNode(ros::NodeHandle nh, sensor_msg
 {
 	std::cout << "Initialising DoorhandleDatabaseGeneration Constructor." << std::endl;
 	
-	pub_ = nh_.advertise<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD,1);
+	pub_ = nh_.advertise<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_GEN,1);
 	(pub_) ? std::cout << "Pub is valid." << std::endl : std::cout << "Pub is not valid." << std::endl;
 
 	ros::Subscriber point_cloud_sub_1_ = nh_.subscribe<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_GEN, 1, &DoorhandleDatabaseGeneration::pointcloudCallback_1, this);

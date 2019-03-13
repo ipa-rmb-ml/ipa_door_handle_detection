@@ -42,7 +42,7 @@
 #define TOPIC_POINT_CLOUD_IN "/pico_flexx/points"
 #define TOPIC_POINT_CLOUD_OUT "/point_cloud_output"
 #define POINT_CLOUD_TEMPLATE_PATH "/home/robot/Desktop/rmb-ml"
-#define CAMERA_LINK ""
+#define CAMERA_LINK "pico_flexx_optical_frame"
 
 // creates vector with pointclouds where each represents a cluster idintified by region growing
 class StartHandleDetection

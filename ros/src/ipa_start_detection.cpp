@@ -3,17 +3,13 @@
 #include "ipa_door_handle_segmentation.h"
 #include "ipa_door_handle_template_alignment.h"
 
-#define TOPIC_POINT_CLOUD_IN "test"
-#define TOPIC_POINT_CLOUD_OUT "test"
-
-
 StartHandleDetection::StartHandleDetection(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg) :
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
-	std::string camera_link = "test" ;
-	std::string PATH_TO_TEMPLATE_DIR = "test";
+	std::string camera_link = "camera_link" ;
+	std::string PATH_TO_TEMPLATE_DIR = "/home/robot/Desktop/rmb-ml/TemplateDataBase";
 
-	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataPCAXYZRGB/"; // only for testing -> change later
+	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataPCA_XYZRGB/"; // only for testing -> change later
 	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/";
 	filePathBBInformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataBB/";
 
