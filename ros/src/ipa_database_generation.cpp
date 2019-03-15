@@ -23,11 +23,13 @@ nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 
 std::string DoorhandleDatabaseGeneration::getFilePathFromParameter(int dist, int angle_XZ, int angle_YZ)
 {
-
+		int num_dist = 3;
 		int distances[] = {40-dist,55-dist,70-dist};
 
+		int num_angle_xz = 3;
 		int angle_xz[] = {-10-angle_XZ,0-angle_XZ,10-angle_XZ}; //deg
 
+		int num_angle_yz = 3;
 		int angle_yz[] = {0-angle_YZ,5-angle_YZ}; // deg
 
 		// setup vec contain this info: angle_xz, angle_yz, distance to door plane
@@ -35,7 +37,7 @@ std::string DoorhandleDatabaseGeneration::getFilePathFromParameter(int dist, int
 	//distance loop
  		int index_d = 0 ;
 		int n_d = abs(distances[0]);
-		for (int i = 1; i < 4; i++)
+		for (int i = 1; i < num_dist; i++)
 		{
 			if (distances[i] < n_d)
 			{
@@ -47,7 +49,7 @@ std::string DoorhandleDatabaseGeneration::getFilePathFromParameter(int dist, int
 
 		int index_a1 = 0 ;
 		int n_a1 = abs(angle_xz[0]);
-		for (int i = 1; i < 7; i++)
+		for (int i = 1; i < num_angle_xz; i++)
 		{
 			if (angle_xz[i] < n_a1)
 			{
@@ -59,7 +61,7 @@ std::string DoorhandleDatabaseGeneration::getFilePathFromParameter(int dist, int
 
 		int index_a2 = 0 ;
 		int n_a2 = abs(angle_yz[0]);
-		for (int i = 1; i < 2; i++)
+		for (int i = 1; i < num_angle_yz; i++)
 		{
 			if (angle_yz[i] < n_a2)
 			{
