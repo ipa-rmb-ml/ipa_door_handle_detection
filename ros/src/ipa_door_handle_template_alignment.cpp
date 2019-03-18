@@ -118,7 +118,7 @@ std::vector<Eigen::Matrix4f> FeatureCloudGeneration::loadGeneratedPCATransformat
       while(entry = readdir(pDIR)){
 
           if( strcmp(entry->d_name,filePath.c_str()) != 0 && strcmp(entry->d_name, "..") != 0 &&  strcmp(entry->d_name, ".") != 0)
-							{
+		{
 
                 Eigen::Matrix4f trafo_pca(4,4);
 							//load PCD File and perform segmentation

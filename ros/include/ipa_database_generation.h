@@ -59,10 +59,15 @@ public:
 
 	void pointcloudCallback_2(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg);
 
+	pcl::PointCloud<pcl::PointXYZ>::Ptr filterPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud,std::vector<double> BB_vec);
+
+	std::vector <double> readBoundingBoxFromTXT();
+
 	std::string getFilePathFromParameter(int dist, int angle_XZ, int angle_YZ);
 
 private:
 	ros::Publisher pub_;
+	ros::Publisher pub2_;
 	ros::NodeHandle nh_;
 	sensor_msgs::PointCloud2::Ptr point_cloud_out_msg_;
 	ros::Subscriber point_cloud_sub_;

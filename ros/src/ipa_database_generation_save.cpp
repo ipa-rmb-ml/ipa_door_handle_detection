@@ -8,6 +8,13 @@
 #include <stropts.h>
 
 
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/passthrough.h>
+
+
+
+
 // definition
 #define TOPIC_POINT_CLOUD_GEN "/pico_flexx/points"  //ROS topic point cloud
 #define TOPIC_POINT_CLOUD_PATCH "/selected_patch" //ROS topic selected patch 
@@ -17,7 +24,11 @@ DoorhandleDatabaseGeneration::DoorhandleDatabaseGeneration(ros::NodeHandle nh, s
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
 	initCameraNode(nh,point_cloud_out_msg);	
+
+
 }
+
+
 
 
 std::string DoorhandleDatabaseGeneration::getFilePathFromParameter(int dist, int angle_XZ, int angle_YZ)
@@ -99,7 +110,8 @@ void DoorhandleDatabaseGeneration::pointcloudCallback_1(const sensor_msgs::Point
 	pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
 
 	//transform imported pointcloud point_cloud_msg to pointcloud_in_pcl_format
-	pcl::fromROSMsg(*point_cloud_msg, *point_cloud);
+	pcl::fromROSMsg(*point_cloud_msg, *point_cloud);	
+
 
 	if (point_cloud->points.size() != 0)
 	{
@@ -140,79 +152,15 @@ void DoorhandleDatabaseGeneration::pointcloudCallback_1(const sensor_msgs::Point
 		setup_ << angle_1,angle_2,dist;  
 	}
 
-	if  (std::cin.get() == '\n') 
-	{
-		int dist	 = setup_(2);
-		int angle_XZ = setup_(0);
-		int angle_YZ = setup_(1);
+	std::vector <double> BB_vec = readBoundingBoxFromTXT();
 
-		std::string filename_append =getFilePathFromParameter(dist,angle_XZ,angle_YZ);
-		std::cout << filename_append << std::endl;
+	//filter point cloud
+	pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud_filt (new pcl::PointCloud<pcl::PointXYZ>);
+	point_cloud_filt= filterPointCloud(point_cloud, BB_vec);
 
-		std::string myString = "";
-		std::string model_type = "";
-		std::string save_bool = "";
-
-		while(true)
-		{
-		
-			
-			std::cout << "Save Point Cloud" << std::endl;
-			
-			std::cout << "Enter type of handle and confirm with enter:" << std::endl;
-
-			std::getline(std::cin, myString);
-
-			if  (myString.length() != 0)
-			{
-				model_type = myString;
-				break;
-			}
-		} 
-
-		std::string name_pcd  = "door_handle_type_" + model_type + filename_append;
-		std::string path_type = PATH_TO_DIR + model_type + "/" + name_pcd ;
-
-		while(true)
-		{
-			std::cout << "Save to file? [y/n]" << std::endl;
-			std::getline(std::cin, myString);
-
-			if  (myString.length() != 0)
-			{
-				save_bool = myString;
-
-				if (save_bool.compare("y") == 0)
-				{
-					// check if directory exists,
-
-						boost::filesystem::path p(PATH_TO_DIR + model_type);  // avoid repeated path construction below
-
-						if (!exists(p))    // does path p actually exist?
-						{
-							ROS_WARN("Creating Directory...");
-							boost::filesystem::create_directory(p);	
-							// store png 
-						}
-							ROS_WARN("Writing point cloud to pcd file...");
-							//std::cout<<path_type<<std::endl;
-							std::cout<<point_cloud->points.size()<<std::endl;
-							pcl::io::savePCDFileASCII (path_type,*point_cloud);
-
-					break;
-				}
-
-				else
-				{
-					ROS_WARN("Cancelling selection...");
-					break;
-				}
-			}
-		} 
-		// vreate saving path -> based on handle type name 
-		//save selected patch 
-		// save reduced object with 
-	}
+	std::cout<<point_cloud_filt->points.size()<<std::endl;
+	pcl::toROSMsg(*point_cloud_filt, *point_cloud_out_msg_);
+	pub2_.publish(point_cloud_out_msg_);
 
 
 }
@@ -223,6 +171,7 @@ void DoorhandleDatabaseGeneration::initCameraNode(ros::NodeHandle nh, sensor_msg
 	std::cout << "Initialising DoorhandleDatabaseGeneration Constructor." << std::endl;
 	
 	pub_ = nh_.advertise<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_GEN,1);
+	pub2_ = nh_.advertise<sensor_msgs::PointCloud2>("filtered_cluster",1);
 
 	ros::Subscriber point_cloud_sub_1_ = nh_.subscribe<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_GEN, 1, &DoorhandleDatabaseGeneration::pointcloudCallback_1, this);
 
@@ -230,6 +179,7 @@ void DoorhandleDatabaseGeneration::initCameraNode(ros::NodeHandle nh, sensor_msg
 	ros::Rate loop_rate(10);
 	while (ros::ok())
 	{
+	
 		ros::spinOnce();
 		loop_rate.sleep();
 	}
@@ -239,6 +189,68 @@ void DoorhandleDatabaseGeneration::initCameraNode(ros::NodeHandle nh, sensor_msg
 	}
 	std::cout << "DoorhandleDatabaseGeneration Constructor Initialised." << std::endl;
 }
+
+
+std::vector <double>  DoorhandleDatabaseGeneration::readBoundingBoxFromTXT()
+{
+  // read in from path
+  std::string pathTXT = "/home/robot/Desktop/rmb-ml/test.txt";
+
+  std::ifstream indata;
+  indata.open(pathTXT.c_str());
+  std::string line;
+
+std::vector <double> BB_vec;
+
+	
+
+ while(!indata.eof())
+            {
+              std::string line = "";
+              std::getline(indata,line);
+
+              if (!line.empty())
+              {
+  		BB_vec.push_back(std::atof(line.c_str()));
+              }
+						} // end if
+indata.close();
+
+return BB_vec;
+
+}
+
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr DoorhandleDatabaseGeneration::filterPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud, std::vector <double> BB_vec)
+{
+pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud_filt (new pcl::PointCloud<pcl::PointXYZ>);
+
+// x y z x y z
+// left: x, z, y right: x,z,z
+
+	double x_left = BB_vec.at(0);
+	double y_left = BB_vec.at(2);
+	double x_right = BB_vec.at(3);
+	double y_right = BB_vec.at(5);
+
+std::cout<<"x_left: " << x_left*100<<std::endl;
+std::cout<<"x_right: " << x_right*100<<std::endl;
+
+std::cout<<"y_left: " << y_left*100<<std::endl;
+std::cout<<"y_right: " << y_right*100<<std::endl;
+
+  pcl::PassThrough<pcl::PointXYZ> pass;
+  pass.setInputCloud (point_cloud);
+  pass.setFilterFieldName ("x");
+  pass.setFilterLimits (-0.02, 0.010);
+  pass.setFilterFieldName ("y");
+  pass.setFilterLimits (0, 0.020);
+  pass.filter (*point_cloud_filt);
+
+
+return point_cloud_filt;
+}
+
 
 // =================================================0
 int main(int argc, char **argv)
