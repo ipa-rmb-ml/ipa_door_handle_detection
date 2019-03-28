@@ -40,9 +40,10 @@
 // definition of the settings for the camera --> might be adapted --> read in from TXT file
 
 #define TOPIC_POINT_CLOUD_IN "/pico_flexx/points"
-#define TOPIC_POINT_CLOUD_OUT "/point_cloud_output"
+#define TOPIC_POINT_CLOUD_OUT1 "/template_matching"
+#define TOPIC_POINT_CLOUD_OUT2 "/door_handle"
 #define POINT_CLOUD_TEMPLATE_PATH "/home/robot/Desktop/rmb-ml"
-#define CAMERA_LINK "pico_flexx_optical_frame"
+#define CAMERA_LINK "/pico_flexx_optical_frame"
 
 // creates vector with pointclouds where each represents a cluster idintified by region growing
 class StartHandleDetection
@@ -53,18 +54,26 @@ public:
 
 	void initCameraNode(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg);
 
-	void pointcloudCallback(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg);	
+	void pointcloudCallback_1(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg);	
+
+	void pointcloudCallback_2(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg);	
 
 private:
-	ros::Publisher pub_;
+	ros::Publisher pub1_;
+	ros::Publisher pub2_;
 	ros::NodeHandle nh_;
+	ros::Subscriber point_cloud_sub1_;
+	ros::Subscriber point_cloud_sub2_;
 	sensor_msgs::PointCloud2::Ptr point_cloud_out_msg_;
-	ros::Subscriber point_cloud_sub_;
+	
 	
 	double max_dist_1_;
 	double max_dist_2_;
 	double overlap_ratio_;
 	double diag_BB3D_lim_;
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud_scenery_;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr handle_point_cloud_;
 
 	std::string filePathXYZRGB_;
 	std::string filePathNormals_;

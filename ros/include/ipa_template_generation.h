@@ -69,5 +69,6 @@ std::string targetPathPCA_;
 std::string targetPathEigen_;
 std::string targetPathBB_;
 std::string TEMPLATE_PATH_;
+std::string BASE_PATH_;
 
 };

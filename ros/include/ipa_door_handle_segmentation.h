@@ -65,7 +65,7 @@ public:
 	//main function og the segmentation class
 	std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > segmentPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
 	
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr changePointCloudColor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud);
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr changePointCloudColor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, int r, int g, int b);
 
 	planeInformation detectPlaneInPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
 

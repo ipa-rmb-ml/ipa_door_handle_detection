@@ -113,20 +113,6 @@ target_link_libraries(ipa_template_generation
         ${PCL_LIBRARIES}
 )
 
-# database generation
-add_executable(ipa_database_generation
-    ros/src/ipa_database_generation.cpp
-    ros/src/ipa_door_handle_segmentation.cpp
-)
-
-add_dependencies(ipa_database_generation
-        ${${PROJECT_NAME}_EXPORTED_TARGETS}
-        ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(ipa_database_generation
-        ${catkin_LIBRARIES}
-        ${PCL_LIBRARIES}
-)
 
 
 

@@ -6,10 +6,10 @@
 StartHandleDetection::StartHandleDetection(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg) :
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
-	std::string camera_link = "camera_link" ;
-	std::string PATH_TO_TEMPLATE_DIR = "/home/robot/Desktop/rmb-ml/TemplateDataBase";
+	std::string camera_link = "pico_flexx_optical_frame" ;
+	std::string PATH_TO_TEMPLATE_DIR = "/home/rmb-ml/Desktop/TemplateDataBase";
 
-	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataPCA_XYZRGB/"; // only for testing -> change later
+	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataXYZRGB/"; // only for testing -> change later
 	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/";
 	filePathBBInformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataBB/";
 
@@ -23,7 +23,7 @@ nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 	initCameraNode(nh,point_cloud_out_msg);	
 }
 
-void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg)
+void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg)
 {
 		
 	pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
@@ -41,8 +41,11 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 	pcl::PointCloud<pcl::Normal>::Ptr cluster_pca_normals (new pcl::PointCloud<pcl::Normal>);
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca(new pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca_best(new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr assumed_handle_point_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 
 	//========SEGMENTATION==================
+
+	point_cloud_scenery_ = pointcloud_in_pcl_format; 
 		
 	// create segmentation object
 	PointCloudSegmentation segObj;
@@ -76,7 +79,11 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster = cluster_vec[num_cluster];		
 
 			// estimate preconditions
+			
+			assumed_handle_point_cloud = cluster;
+
 			cluster = featureObj.downSamplePointCloud(cluster);
+
 			pcaInformation pcaData =  segObj.calculatePCA(cluster);
 
 			Eigen::Matrix4f cluster_pca_trafo = pcaData.pca_transformation;
@@ -91,6 +98,7 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 			// else continue
 			if (!isParallel)
 			{
+				ROS_WARN("Orientation of BB3D not parallel!");
 				continue;
 			}
 
@@ -129,6 +137,13 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 			std::cout<<"distance: " << dist << "cm" <<std::endl;
 			std::cout<<"diag: " << BB_Diag_3D << "cm "<< std::endl;
 
+			int r = 0;
+			int g = 0;
+			int b = 255;
+
+			pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_pca_rgb = segObj.changePointCloudColor(cluster_pca,r,g,b);
+
+			*published_pc+= *cluster_pca_rgb;
 
 			// name appendix _distance_70cm_angleXZ_0°_angleYZ_0°.pcd
 			// iterate over templates (model types)
@@ -141,9 +156,7 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 			// MODEL001 | MODEL002 | MODEL003 | 
 			// check BB3D from PCA and decide ->iterate over templates or not?
 
-			// for each possible model --> store vector with infotmation (translation err, fitness_score, ratio) -> select best fi
-
-
+			// for each possible model --> store vector with infotmation (translation err, fitness_score, ratio) -> select best fit
 
 			// ====================CHANGE TO PCAs BOUNDING BOX CRIT ==================================
 
@@ -151,13 +164,20 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 
 			std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
 			Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > template_vec_xyz = featureObj.loadGeneratedTemplatePCLXYZ(filePathXYZRGB_);
-												// 2. normals
+
+			if (template_vec_xyz.size() == 0)
+			{
+				ROS_WARN("No template loaded. Check filepath");
+				std::cout<<"Current Path: "<<filePathXYZRGB_<<std::endl;
+				continue;
+			}
+			
+			// 2. normals
 			//std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr,
 			//Eigen::aligned_allocator<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> > template_vec_features = featureObj.loadGeneratedTemplatePCLFeatures(filePathFeatures_);
 														// 3. features
 			//std::vector<pcl::PointCloud<pcl::Normal>::Ptr,
 			//Eigen::aligned_allocator<pcl::PointCloud<pcl::Normal>::Ptr> >template_vec_normals = featureObj.loadGeneratedTemplatePCLNormals(filePathNormals_);
-
 														// 4. PCA
 			std::vector<Eigen::Matrix4f> template_pca_trafo_vec = featureObj.loadGeneratedPCATransformations(filePathPCATransformations_);
 	
@@ -179,6 +199,10 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 							Eigen::Matrix4f pca_template =	 template_pca_trafo_vec[num_template]; // rotation and translatoion to origin
 							Eigen::Vector3f BB_3D = template_BB_3D[num_template];
 
+							pcaInformation pcaData =  segObj.calculatePCA(cluster);
+							Eigen::Matrix4f cluster_pca_trafo = pcaData.pca_transformation;
+							Eigen::Vector3f bb_3D_cluster = pcaData.bounding_box_3D;
+
 							double BB_mean =  sqrt(BB_3D(0) * BB_3D(0) + BB_3D (1) * BB_3D (1) + BB_3D (2)* BB_3D (2));
 
 							// Eigen::Matrix4f pca_assumed -> rotation and tranlation to origin
@@ -188,15 +212,36 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 
 							Eigen::Matrix4f transform_hndl;
 							transform_hndl.setIdentity();
-							transform_hndl.block<3,3>(0,0) = cluster_pca_trafo.block<3,3>(0,0) * pca_template.block<3,3>(0,0).transpose();
+							transform_hndl.block<3,3>(0,0) = pca_template.block<3,3>(0,0) * pca_template.block<3,3>(0,0).transpose();
 
-							pcl::transformPointCloud (*template_pca,*template_pca, transform_hndl);
+							pcl::transformPointCloud (*template_pca,*template_pca, cluster_pca_trafo);
+
+							// apply centroid shift
+							Eigen::Vector4f pcaCentroid;
+							Eigen::Matrix4f centroid_trafo;
+							centroid_trafo.setIdentity();
+
+							pcl::compute3DCentroid(*template_pca, pcaCentroid);
+							centroid_trafo.block<4,1>(0,3) =  -pcaCentroid;
+
+							pcl::transformPointCloud (*template_pca,*template_pca, centroid_trafo);
 
 							icpInformation icp_data = featureObj.icpBasedTemplateAlignment(cluster_pca,template_pca);
 							double fitness_score = icp_data.icp_fitness_score;
 							Eigen::Matrix4f icp_transformation = icp_data.icp_transformation;
 
 							pcl::transformPointCloud (*template_pca,*template_pca, icp_transformation);
+
+							int r = 255;
+							int g = 0;
+							int b = 0;
+
+							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca_rgb = segObj.changePointCloudColor(template_pca,r,g,b);
+
+							//*published_pc = *template_pca_rgb;
+							//pcl::toROSMsg(*published_pc, *point_cloud_out_msg_);
+							//point_cloud_out_msg_->header.frame_id = CAMERA_LINK;
+							//pub_.publish(point_cloud_out_msg_);
 
 							std::vector<int> indices = featureObj.estimateCorrespondences(cluster_pca, template_pca,max_dist_1_,overlap_ratio_);
 
@@ -285,7 +330,10 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 			// B  Distance --> paper
 			ROS_WARN("HANDLE DETECTED");
 
-			*published_pc+= *cluster_pca;
+
+			
+			 handle_point_cloud_ = assumed_handle_point_cloud;
+			*published_pc+= *template_pca;
 
 
 		} // end if check
@@ -295,16 +343,63 @@ void StartHandleDetection::pointcloudCallback(const sensor_msgs::PointCloud2::Co
 			*published_pc+= *template_pca;
 			pcl::toROSMsg(*published_pc, *point_cloud_out_msg_);
 			point_cloud_out_msg_->header.frame_id = CAMERA_LINK;
-			pub_.publish(point_cloud_out_msg_);
+			pub1_.publish(point_cloud_out_msg_);
 }
 // end void callback
+
+
+
+
+void StartHandleDetection::pointcloudCallback_2(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg)
+{
+
+
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr published_pc (new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud_scenery_rgb (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+	PointCloudSegmentation segObj;
+
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr handle_point_cloud_rgb = segObj.changePointCloudColor(handle_point_cloud_,255,0,0);
+
+	pcl::PointXYZRGB pp;
+	for (size_t i = 0; i < point_cloud_scenery_->points.size (); ++i)
+	{
+		pp.x = point_cloud_scenery_->points[i].x;
+		pp.y = point_cloud_scenery_->points[i].y;
+		pp.z = point_cloud_scenery_->points[i].z;
+		pp.r = 0;
+		pp.g = 255;
+		pp.b = 0;
+		point_cloud_scenery_rgb->points.push_back(pp);	
+
+	}
+
+	*published_pc += *point_cloud_scenery_rgb;
+	*published_pc += *handle_point_cloud_rgb;
+
+	pcl::toROSMsg(*published_pc, *point_cloud_out_msg_);
+	point_cloud_out_msg_->header.frame_id = CAMERA_LINK;
+	pub2_.publish(point_cloud_out_msg_);
+
+
+
+}
+
 
 void StartHandleDetection::initCameraNode(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg)
 {
 	std::cout << "Initialising StartHandleDetection Constructor." << std::endl;
-	pub_ = nh_.advertise<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_OUT,1);
-	(pub_) ? std::cout << "Pub is valid." << std::endl : std::cout << "Pub is not valid." << std::endl;
-	ros::Subscriber point_cloud_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_IN, 1, &StartHandleDetection::pointcloudCallback, this);
+
+	// publish template & cluster
+	pub1_ = nh_.advertise<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_OUT1,1);
+	(pub1_) ? std::cout << "Pub1 is valid." << std::endl : std::cout << "Pub is not valid." << std::endl;
+	ros::Subscriber point_cloud_sub1_ = nh_.subscribe<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_IN, 1, &StartHandleDetection::pointcloudCallback_1, this);
+
+	// publish handle into point cloud
+	pub2_ = nh_.advertise<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_OUT2,1);
+	(pub2_) ? std::cout << "Pub2 is valid." << std::endl : std::cout << "Pub is not valid." << std::endl;
+	ros::Subscriber point_cloud_sub2_ = nh_.subscribe<sensor_msgs::PointCloud2>(TOPIC_POINT_CLOUD_IN, 1, &StartHandleDetection::pointcloudCallback_2, this);
+
 	ros::Duration(1).sleep();
 
 	ros::Rate loop_rate(10);

@@ -7,7 +7,7 @@ PointCloudSegmentation::PointCloudSegmentation()
 {
 
 // filter points by distance
-min_point_to_plane_dist_ = 0.01;//m
+min_point_to_plane_dist_ = 0.05;// 5cm to 10 cm
 max_point_to_plane_dist_ = 0.1;
 
 // filter points by door handle height
@@ -28,8 +28,8 @@ inlier_ratio_thres_ = 0.9;
 distance_thres_ = 0.01;
 max_num_iter_ = 1000;
 
-min_cluster_size_ = 3000;
-max_cluster_size_ = 10000;
+min_cluster_size_ = 10;
+max_cluster_size_ = 500;
 
 // angle between cyliders axis and door planes normals
 // maximal difference for both to be orthogonal 
@@ -38,7 +38,6 @@ max_diff_norm_axis_ = 7;
 angle_thres_x_ = 10.0;
 
 }
-
 
 
 // main segmentation process including coloring the pointcloud and the plane detection
@@ -58,6 +57,7 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 	// plane_pc: detected plane ccolored in red
 	// plane coeff: coeffs of the detected plane
 
+
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr reduced_pc=minimizePointCloudToObject(input_cloud,plane_pc_indices,plane_coeff);
 
 	std::vector <pcl::PointIndices> clusters = findClustersByRegionGrowing(reduced_pc);
@@ -69,7 +69,7 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 //=====================================================================================================================================
 
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::changePointCloudColor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud)
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::changePointCloudColor(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud, int r, int g, int b)
 {
 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_xyzrgb(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -84,9 +84,9 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::changePointCloudC
 		pclPoint.y = input_cloud->points[i].y;
 		pclPoint.z = input_cloud->points[i].z;
 
-		pclPoint.r = min + rand() % (( max + 1 ) - min);;
-		pclPoint.g = min + rand() % (( max + 1 ) - min);;
-		pclPoint.b = min + rand() % (( max + 1 ) - min);;
+		pclPoint.r = r;
+		pclPoint.g = g;
+		pclPoint.b = b;
 
 		pointcloud_xyzrgb->points.push_back(pclPoint);
 	}
@@ -126,9 +126,13 @@ planeInformation PointCloudSegmentation::detectPlaneInPointCloud(pcl::PointCloud
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::minimizePointCloudToObject(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointIndices::Ptr plane_pc_indices,pcl::ModelCoefficients::Ptr plane_coeff)
 {
 
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr reduced_pc(new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr reduced_pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
 	// calculate point to plane distance
 	pcl::PointXYZRGB pp_PC;
+
+	// Create the filtering object
+
+
 
   	for (size_t i = 0; i < input_cloud->points.size (); ++i)
 	{
@@ -136,26 +140,22 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::minimizePointClou
 		pp_PC.y = input_cloud->points[i].y;
 		pp_PC.z = input_cloud->points[i].z;
 
-std::cout<<pp_PC.z<<std::endl;
 
-			// storing and coloring data from only outside the plane
-		//double point2plane_distance =  pcl::pointToPlaneDistance (pp_PC, plane_coeff->values[0], plane_coeff->values[1], plane_coeff->values[2], plane_coeff->values[3]);
 
-		// add DIN information to ppoint handle
-		// take only values in front of the door
+		// storing and coloring data from only outside the plane
+		double point2plane_distance =  pcl::pointToPlaneDistance (pp_PC, plane_coeff->values[0], plane_coeff->values[1], plane_coeff->values[2], plane_coeff->values[3]);
 
-		//if (pp_PC.z < plane_coeff->values[3])
+		if ( (point2plane_distance > min_point_to_plane_dist_ ) && (point2plane_distance < max_point_to_plane_dist_))
 		{
-			//if ((abs(pp_PC.z - plane_coeff->values[3]) > min_point_to_plane_dist_) && ((abs(pp_PC.z - plane_coeff->values[3])  < max_point_to_plane_dist_))
-			{
+						//std::cout<<point2plane_distance<<std::endl;
 						pp_PC.r = 0;																
 						pp_PC.b = 255;
 						pp_PC.g =0;							
-						reduced_pc->points.push_back(pp_PC);				
-			}
+						reduced_pc_rgb->points.push_back(pp_PC);	
+
 		}
 	}
-	return reduced_pc;
+	return reduced_pc_rgb;
 }
 
 
