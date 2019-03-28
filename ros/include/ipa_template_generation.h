@@ -52,9 +52,13 @@ class DoorHandleTemplateGeneration
 {
 public:
 
-DoorHandleTemplateGeneration(std::string file_path_to_point_clouds);
+DoorHandleTemplateGeneration(std::string file_path_to_point_clouds,std::string handle_type);
 
-void generateTemplatePCLFiles(std::string file_path_to_point_clouds);
+static void StartTemplateGeneration(std::string file_path_to_point_clouds);
+
+void generateTemplatePCLFiles(std::string file_path_to_point_clouds, std::string handle_type);
+
+void createDirectory(std::string path);
 
 std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
 Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > generateTemplateAlignmentObject(std::vector <pcl::PointIndices> clusters,pcl::PointCloud<pcl::PointXYZRGB>::Ptr reduced_pc, pcl::ModelCoefficients::Ptr plane_coeff);

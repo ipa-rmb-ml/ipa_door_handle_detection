@@ -9,9 +9,9 @@ nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 	std::string camera_link = "pico_flexx_optical_frame" ;
 	std::string PATH_TO_TEMPLATE_DIR = "/home/rmb-ml/Desktop/TemplateDataBase";
 
-	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataXYZRGB/"; // only for testing -> change later
-	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/";
-	filePathBBInformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataBB/";
+	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataXYZRGB/001/"; // only for testing -> change later
+	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/001/";
+	filePathBBInformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataBB/001/";
 
 	// correspondence estimation function
 	max_dist_1_ = 0.01; //first crit
@@ -199,10 +199,6 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 							Eigen::Matrix4f pca_template =	 template_pca_trafo_vec[num_template]; // rotation and translatoion to origin
 							Eigen::Vector3f BB_3D = template_BB_3D[num_template];
 
-							pcaInformation pcaData =  segObj.calculatePCA(cluster);
-							Eigen::Matrix4f cluster_pca_trafo = pcaData.pca_transformation;
-							Eigen::Vector3f bb_3D_cluster = pcaData.bounding_box_3D;
-
 							double BB_mean =  sqrt(BB_3D(0) * BB_3D(0) + BB_3D (1) * BB_3D (1) + BB_3D (2)* BB_3D (2));
 
 							// Eigen::Matrix4f pca_assumed -> rotation and tranlation to origin
@@ -354,34 +350,35 @@ void StartHandleDetection::pointcloudCallback_2(const sensor_msgs::PointCloud2::
 {
 
 
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr published_pc (new pcl::PointCloud<pcl::PointXYZRGB>);
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud_scenery_rgb (new pcl::PointCloud<pcl::PointXYZRGB>);
-
-	PointCloudSegmentation segObj;
-
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr handle_point_cloud_rgb = segObj.changePointCloudColor(handle_point_cloud_,255,0,0);
-
-	pcl::PointXYZRGB pp;
-	for (size_t i = 0; i < point_cloud_scenery_->points.size (); ++i)
+	if (handle_point_cloud_->points.size() > 0)
 	{
-		pp.x = point_cloud_scenery_->points[i].x;
-		pp.y = point_cloud_scenery_->points[i].y;
-		pp.z = point_cloud_scenery_->points[i].z;
-		pp.r = 0;
-		pp.g = 255;
-		pp.b = 0;
-		point_cloud_scenery_rgb->points.push_back(pp);	
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr published_pc (new pcl::PointCloud<pcl::PointXYZRGB>);
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud_scenery_rgb (new pcl::PointCloud<pcl::PointXYZRGB>);
 
+		PointCloudSegmentation segObj;
+
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr handle_point_cloud_rgb = segObj.changePointCloudColor(handle_point_cloud_,255,0,0);
+
+		pcl::PointXYZRGB pp;
+		for (size_t i = 0; i < point_cloud_scenery_->points.size (); ++i)
+		{
+			pp.x = point_cloud_scenery_->points[i].x;
+			pp.y = point_cloud_scenery_->points[i].y;
+			pp.z = point_cloud_scenery_->points[i].z;
+			pp.r = 0;
+			pp.g = 255;
+			pp.b = 0;
+			point_cloud_scenery_rgb->points.push_back(pp);	
+
+		}
+
+		*published_pc += *point_cloud_scenery_rgb;
+		*published_pc += *handle_point_cloud_rgb;
+
+		pcl::toROSMsg(*published_pc, *point_cloud_out_msg_);
+		point_cloud_out_msg_->header.frame_id = CAMERA_LINK;
+		pub2_.publish(point_cloud_out_msg_);
 	}
-
-	*published_pc += *point_cloud_scenery_rgb;
-	*published_pc += *handle_point_cloud_rgb;
-
-	pcl::toROSMsg(*published_pc, *point_cloud_out_msg_);
-	point_cloud_out_msg_->header.frame_id = CAMERA_LINK;
-	pub2_.publish(point_cloud_out_msg_);
-
-
 
 }
 
