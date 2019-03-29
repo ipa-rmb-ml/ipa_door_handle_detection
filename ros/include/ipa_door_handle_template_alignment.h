@@ -81,6 +81,8 @@ struct icpInformation
 };
 
 
+
+
 // based on PointCloudDataImport class 
 // generating the template databasa for various door handle types 
 class FeatureCloudGeneration
@@ -90,11 +92,11 @@ public:
 FeatureCloudGeneration();
 
 // file load different types
-std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> >  loadGeneratedTemplatePCLXYZ(std::string filePath);
-std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> >  loadGeneratedTemplatePCLFeatures(std::string filePath);
+std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> >  loadGeneratedTemplatePCLXYZ(std::string filePath,std::string file_name);
+std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> >  loadGeneratedTemplatePCLFeatures(std::string filePath,std::string file_name);
 std::vector<pcl::PointCloud<pcl::Normal>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::Normal>::Ptr> >  loadGeneratedTemplatePCLNormals(std::string filePath);
-std::vector<Eigen::Matrix4f> loadGeneratedPCATransformations(std::string filePath);
-std::vector<Eigen::Vector3f> loadGeneratedBBInformation(std::string filePath);
+std::vector<Eigen::Matrix4f> loadGeneratedPCATransformations(std::string filePath,std::string file_name);
+std::vector<Eigen::Vector3f> loadGeneratedBBInformation(std::string filePath,std::string file_name);
 
 icpInformation icpBasedTemplateAlignment(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_point_cloud,pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_template_point_cloud);
 
@@ -113,7 +115,6 @@ std::vector<int> estimateCorrespondences(pcl::PointCloud<pcl::PointXYZRGB>::Ptr 
 
 // hardcoded values for ipa_database_generation and ipa_door_handle_template_alignment -> later create .CSV with desired parameters and put in into to directory
 static std::string getFilePathFromParameter(int dist, int angle_1, int angle_2);
-
 
 private:
 double alignment_eps_; //

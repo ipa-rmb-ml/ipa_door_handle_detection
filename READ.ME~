@@ -1,6 +1,6 @@
 To visualize rosbag files in RVIz do the following:
 
-1. Terminal:rosrun tf static_transform_publisher 0 0 0 0 0 0 0 pico_flexx_optical_frame world 
+1. Terminal:rosrun tf static_tnsform_publisher 0 0 0 0 0 0 0 pico_flexx_optical_frame world 
 2. Terminal: rosbag play -l filename.bag // to loop the data
 3. Run rviz:
 	1) fixed frame: pico_flexx_optical_frame

@@ -9,9 +9,9 @@ nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 	std::string camera_link = "pico_flexx_optical_frame" ;
 	std::string PATH_TO_TEMPLATE_DIR = "/home/rmb-ml/Desktop/TemplateDataBase";
 
-	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataXYZRGB/001/"; // only for testing -> change later
-	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/001/";
-	filePathBBInformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataBB/001/";
+	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataXYZRGB/"; // only for testing -> change later
+	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/";
+	filePathBBInformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataBB/";
 
 	// correspondence estimation function
 	max_dist_1_ = 0.01; //first crit
@@ -141,29 +141,27 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 			int g = 0;
 			int b = 255;
 
+
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_pca_rgb = segObj.changePointCloudColor(cluster_pca,r,g,b);
 
 			*published_pc+= *cluster_pca_rgb;
 
-			// name appendix _distance_70cm_angleXZ_0°_angleYZ_0°.pcd
-			// iterate over templates (model types)
-			// full name doorhandle_MODELTYPE_distance_DIST_angleXZ_ANGLEXZ_angleYZ_ANGLEYZ.pcd
 
 			std::string name_pcd = FeatureCloudGeneration::getFilePathFromParameter(dist,angle_XZ,angle_YZ);
-
-		
-			// go into the corresponding directory
-			// MODEL001 | MODEL002 | MODEL003 | 
-			// check BB3D from PCA and decide ->iterate over templates or not?
-
-			// for each possible model --> store vector with infotmation (translation err, fitness_score, ratio) -> select best fit
 
 			// ====================CHANGE TO PCAs BOUNDING BOX CRIT ==================================
 
 			cluster_pca_best_vec.push_back(cluster_pca); // so
 
+			// get folder in root dir
+			// LOOP over folder
+			// use name_pcd to select proper pcd file
+
 			std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
-			Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > template_vec_xyz = featureObj.loadGeneratedTemplatePCLXYZ(filePathXYZRGB_);
+			Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > template_vec_xyz = featureObj.loadGeneratedTemplatePCLXYZ(filePathXYZRGB_,name_pcd);
+
+
+	
 
 			if (template_vec_xyz.size() == 0)
 			{
@@ -171,18 +169,10 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 				std::cout<<"Current Path: "<<filePathXYZRGB_<<std::endl;
 				continue;
 			}
-			
-			// 2. normals
-			//std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr,
-			//Eigen::aligned_allocator<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> > template_vec_features = featureObj.loadGeneratedTemplatePCLFeatures(filePathFeatures_);
-														// 3. features
-			//std::vector<pcl::PointCloud<pcl::Normal>::Ptr,
-			//Eigen::aligned_allocator<pcl::PointCloud<pcl::Normal>::Ptr> >template_vec_normals = featureObj.loadGeneratedTemplatePCLNormals(filePathNormals_);
-														// 4. PCA
-			std::vector<Eigen::Matrix4f> template_pca_trafo_vec = featureObj.loadGeneratedPCATransformations(filePathPCATransformations_);
-	
-			std::vector<Eigen::Vector3f> template_BB_3D = featureObj.loadGeneratedBBInformation(filePathBBInformations_);
 
+			std::vector<Eigen::Matrix4f> template_pca_trafo_vec = featureObj.loadGeneratedPCATransformations(filePathPCATransformations_,name_pcd);
+
+			std::vector<Eigen::Vector3f> template_BB_3D = featureObj.loadGeneratedBBInformation(filePathBBInformations_,name_pcd);
 
 			// ===================== CLASSIFICATION ==========================
 
@@ -201,7 +191,7 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 
 							double BB_mean =  sqrt(BB_3D(0) * BB_3D(0) + BB_3D (1) * BB_3D (1) + BB_3D (2)* BB_3D (2));
 
-							// Eigen::Matrix4f pca_assumed -> rotation and tranlation to origin
+							// Eigen::Matrix4f pca_assumed -> rotation and translation to origin
 							// find rot btw PCA's coordinates systems
 							//  template * R = assumed
 							// R = assumed * template^T;
@@ -232,18 +222,15 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 							int g = 0;
 							int b = 0;
 
-							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca_rgb = segObj.changePointCloudColor(template_pca,r,g,b);
-
-							//*published_pc = *template_pca_rgb;
-							//pcl::toROSMsg(*published_pc, *point_cloud_out_msg_);
-							//point_cloud_out_msg_->header.frame_id = CAMERA_LINK;
-							//pub_.publish(point_cloud_out_msg_);
+							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca_rgb = segObj.changePointCloudColor(template_pca,r,g,b);;
 
 							std::vector<int> indices = featureObj.estimateCorrespondences(cluster_pca, template_pca,max_dist_1_,overlap_ratio_);
 
 							int number_correspondences = indices.size();
 							int number_points_cluster = cluster_pca->points.size();
 							double points_ratio = (double) number_correspondences /  (double) number_points_cluster;
+
+		
 
 							// get transformation 
 							double sum_squared_err =  sqrt(icp_transformation(0,3) * icp_transformation(0,3) + icp_transformation (1,3) * icp_transformation (1,3) + icp_transformation (2,3)* icp_transformation (2,3));
@@ -260,7 +247,7 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 								}
 								else
 								{
-								 ROS_WARN("No Handle Detected");
+								// ROS_WARN("No Handle Detected");
 								}
 						}	//end if cluster size > 0
 				} // end for
@@ -275,7 +262,7 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 	}// endif
 	else
 	{
-		ROS_WARN("No Handle Detected");
+	//	ROS_WARN("No Handle Detected");
 	}
 	
 
@@ -325,8 +312,6 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 
 			// B  Distance --> paper
 			ROS_WARN("HANDLE DETECTED");
-
-
 			
 			 handle_point_cloud_ = assumed_handle_point_cloud;
 			*published_pc+= *template_pca;
