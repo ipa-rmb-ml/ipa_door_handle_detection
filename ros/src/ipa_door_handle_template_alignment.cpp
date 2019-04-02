@@ -21,7 +21,8 @@ alignment_thres_ = 1e-4;
 
 std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > FeatureCloudGeneration::loadGeneratedTemplatePCLXYZ(std::string filePath, std::string file_name)
 {
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+
+
 std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > doorhandle_template_vec;
 
 // list all folder in filePath directory
@@ -39,29 +40,22 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
                         if( strcmp(entry->d_name,filePath.c_str()) != 0 && strcmp(entry->d_name, "..") != 0 &&  strcmp(entry->d_name, ".") != 0)
 							          {
                               //load PCD File and perform segmentation
-                            std::string filePathTemplatePCD =  filePath + entry->d_name + "/door_handle_type_" + entry->d_name + file_name;
-                          
-
-                             template_cloud->clear(); 
+                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+                            std::string filePathTemplatePCD =  filePath + entry->d_name + "/door_handle_type_" + entry->d_name + file_name;                       
+ 
                           if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (filePathTemplatePCD, *template_cloud) == -1) 
                             {
                               PCL_ERROR ("Couldn't read PCD file. \n");
                             }
 
-                         std::cout<<template_cloud->points.size()<<std::endl;
                           doorhandle_template_vec.push_back(template_cloud);
-                                              
+
+                          
                         } 
                 }
                 closedir(pDIR);
         }
-
-		  std::cout<<doorhandle_template_vec[0]->points.size()<<std::endl;
-			    std::cout<<doorhandle_template_vec[1]->points.size()<<std::endl;
-
-
 		return doorhandle_template_vec;
-
 }
 
 
@@ -186,6 +180,7 @@ std::vector<Eigen::Matrix4f> FeatureCloudGeneration::loadGeneratedPCATransformat
        }// end while
             closedir(pDIR);
     }
+
 		return pca_transformation_vec;
 }
 
@@ -241,13 +236,13 @@ std::vector<Eigen::Vector3f> FeatureCloudGeneration::loadGeneratedBBInformation(
                 vec(i) =   mat_element_vec.at(i);
 
             }
-
             BB_3D_vec.push_back(vec);
-
           }
        }// end while
        closedir(pDIR);
     }
+
+
 		return BB_3D_vec;
 }
 
@@ -382,16 +377,17 @@ return input_point_cloud;
 
 
 
-std::vector<int> FeatureCloudGeneration::estimateCorrespondences(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_point_cloud_1, pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_point_cloud_2, double max_dist,double overlap_ratio)
+double FeatureCloudGeneration::estimateCorrespondences(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_pc, pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pc, double max_dist,double overlap_ratio)
 {
     boost::shared_ptr<pcl::Correspondences> cor_all_ptr (new pcl::Correspondences),
 																						cor_remaining_ptr (new pcl::Correspondences),
 																						cor_remaining_ptr_nrm (new pcl::Correspondences);
+
 		// correspondence rejection for ICP
 		/// determine all corresp
 		pcl::registration::CorrespondenceEstimation<pcl::PointXYZRGB, pcl::PointXYZRGB> corEst;
-		corEst.setInputSource (input_point_cloud_1);
-		corEst.setInputTarget (input_point_cloud_2); 
+		corEst.setInputSource (template_pc);
+		corEst.setInputTarget (cluster_pc); 
 		corEst.determineCorrespondences (*cor_all_ptr);
 														
 		//Correspondence Rejection methods
@@ -412,7 +408,13 @@ std::vector<int> FeatureCloudGeneration::estimateCorrespondences(pcl::PointCloud
 		pcl::ExtractIndices<pcl::PointXYZRGB> ex;
 		pcl::registration::getQueryIndices (*cor_remaining_ptr,indices);
 
-  return indices;
+    int number_correspondences = indices.size();
+    int number_points_template = template_pc->points.size();
+
+		double points_ratio = (double) number_correspondences /  (double) number_points_template;
+
+  return points_ratio;
+
 }
 
 

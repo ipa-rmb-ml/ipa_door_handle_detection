@@ -157,11 +157,10 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 			// LOOP over folder
 			// use name_pcd to select proper pcd file
 
+
+
 			std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
 			Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > template_vec_xyz = featureObj.loadGeneratedTemplatePCLXYZ(filePathXYZRGB_,name_pcd);
-
-
-	
 
 			if (template_vec_xyz.size() == 0)
 			{
@@ -222,47 +221,48 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 							int g = 0;
 							int b = 0;
 
-							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca_rgb = segObj.changePointCloudColor(template_pca,r,g,b);;
+							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca_rgb = segObj.changePointCloudColor(template_pca,r,g,b);
 
-							std::vector<int> indices = featureObj.estimateCorrespondences(cluster_pca, template_pca,max_dist_1_,overlap_ratio_);
-
-							int number_correspondences = indices.size();
-							int number_points_cluster = cluster_pca->points.size();
-							double points_ratio = (double) number_correspondences /  (double) number_points_cluster;
-
-		
+							double points_ratio = featureObj.estimateCorrespondences(cluster_pca, template_pca,max_dist_1_,overlap_ratio_);
 
 							// get transformation 
 							double sum_squared_err =  sqrt(icp_transformation(0,3) * icp_transformation(0,3) + icp_transformation (1,3) * icp_transformation (1,3) + icp_transformation (2,3)* icp_transformation (2,3));
 				
+
 							// for each assumed cluster  create a vector of 
 							// template 1 -- icp trafo
 							// template 2 -- icp trafo
+
 
 								if ((sum_squared_err < sum_squared_err_min) && (points_ratio > points_ratio_min))
 								{
 									sum_squared_err_min = sum_squared_err;
 									points_ratio_min = points_ratio;
 									template_pca_best = template_pca;
+									std::cout<<sum_squared_err<<std::endl;
 								}
 								else
 								{
-								// ROS_WARN("No Handle Detected");
+					
+								   std::cout<<sum_squared_err<<std::endl;
 								}
 						}	//end if cluster size > 0
 				} // end for
 
+
+
 			// ================================================= ITERATION OVER TEMPLATES ===============================================	
+
 
 			sum_squared_err_vec.push_back(sum_squared_err_min);
 			template_pca_best_vec.push_back(template_pca_best);
+
 		} // end for assumed handle cloud
 		// find best cluster template match
 
 	}// endif
 	else
 	{
-	//	ROS_WARN("No Handle Detected");
 	}
 	
 
@@ -290,20 +290,8 @@ void StartHandleDetection::pointcloudCallback_1(const sensor_msgs::PointCloud2::
 
 		if (template_pca->points.size() > 0)
 		{
-			std::vector<int> indices = featureObj.estimateCorrespondences(cluster_pca,template_pca,max_dist_2_,overlap_ratio_);
 
-			for (int i = 0; i < indices.size(); i++)
-				{		
-				pp_filt.x=cluster_pca->points[i].x; 
-				pp_filt.y=cluster_pca->points[i].y; 
-				pp_filt.z=cluster_pca->points[i].z; 
-				pp_filt.r = 0;
-				pp_filt.g = 255;
-				pp_filt.b = 0;
-				pc_filt->push_back(pp_filt);
-				}			
-
-			icpInformation icp_data_nest_fit = featureObj.icpBasedTemplateAlignment(pc_filt,template_pca);
+			icpInformation icp_data_nest_fit = featureObj.icpBasedTemplateAlignment(cluster_pca,template_pca);
 
 			double fitness_score = icp_data_nest_fit.icp_fitness_score;
 			Eigen::Matrix4f icp_transformation_best_fit = icp_data_nest_fit.icp_transformation;

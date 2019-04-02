@@ -111,7 +111,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr downSamplePointCloud(pcl::PointCloud<pcl:
 std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
 Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > generateAlignmentObject(std::vector <pcl::PointIndices> clusters,pcl::PointCloud<pcl::PointXYZRGB>::Ptr reduced_pc, pcl::ModelCoefficients::Ptr plane_coeff);
 
-std::vector<int> estimateCorrespondences(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_point_cloud_1, pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_point_cloud_2, double max_dist, double overlap_ratio);
+double estimateCorrespondences(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_point_cloud_1, pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_point_cloud_2, double max_dist, double overlap_ratio);
 
 // hardcoded values for ipa_database_generation and ipa_door_handle_template_alignment -> later create .CSV with desired parameters and put in into to directory
 static std::string getFilePathFromParameter(int dist, int angle_1, int angle_2);
