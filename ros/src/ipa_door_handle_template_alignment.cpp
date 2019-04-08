@@ -9,53 +9,117 @@ FeatureCloudGeneration::FeatureCloudGeneration()
 alignment_eps_ = 1e-6;
 alignment_thres_ = 1e-4;
 
- max_num_iter_icp_ref_ = 5;
+ max_num_iter_icp_ref_ = 2;
  corresp_dist_step_ = 0.01;
  max_num_iter_ = 1000;
  similarity_thres_ = 0.9f;
 
  rad_search_dist_ = 0.03;
  voxel_grid_size_ = 0.001f;
+ diagonal_max_tol_ = 3; // in cm
 }
 
 
-std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > FeatureCloudGeneration::loadGeneratedTemplatePCLXYZ(std::string filePath, std::string file_name)
+templateInformation FeatureCloudGeneration::loadGeneratedTemplatePCLXYZ(std::string filePath,std::string filePathTXT,std::string file_name, double BB_3D_cluster)
 {
 
-
 std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > doorhandle_template_vec;
+
+std::vector<std::string> handle_type_name_vec;
 
 // list all folder in filePath directory
 // each folder represents one door handle type
 // LOOP over folders to load handle pcd file with the given filename
 
-
  DIR *pDIR;
         struct dirent *entry;
         if(pDIR=opendir(filePath.c_str()))
-		{
+	    	{
               // obtaining folders in directory
                 while(entry = readdir(pDIR))
                 {
-                        if( strcmp(entry->d_name,filePath.c_str()) != 0 && strcmp(entry->d_name, "..") != 0 &&  strcmp(entry->d_name, ".") != 0)
+                  std::string model_type = entry->d_name;
+
+                        if( strcmp(model_type.c_str(),filePath.c_str()) != 0 && strcmp(model_type.c_str(), "..") != 0 &&  strcmp(model_type.c_str(), ".") != 0)
 							          {
                               //load PCD File and perform segmentation
                             pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-                            std::string filePathTemplatePCD =  filePath + entry->d_name + "/door_handle_type_" + entry->d_name + file_name;                       
- 
-                          if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (filePathTemplatePCD, *template_cloud) == -1) 
-                            {
-                              PCL_ERROR ("Couldn't read PCD file. \n");
-                            }
 
-                          doorhandle_template_vec.push_back(template_cloud);
+                            std::string filePathTemplatePCD =  filePath + model_type + "/door_handle_type_" + model_type + file_name;   
+
+                            // PUT TO FUNCTION
+
+                            Eigen::Vector3f vec = readDataFromTXT2Vec(filePathTXT,model_type,file_name);
+
+                          	double BB_3D_template =  sqrt(vec(0) * vec(0) + vec (1) * vec (1) + vec (2)* vec (2));
+
+                            // if cluster diagonal matches template diagonal -> push to vector
+                            if (abs(BB_3D_template-BB_3D_cluster) < diagonal_max_tol_)
+                            {
+                              
+                                if (pcl::io::loadPCDFile<pcl::PointXYZRGB> (filePathTemplatePCD, *template_cloud) == -1) 
+                                {
+                                  PCL_ERROR ("Couldn't read PCD file. \n");
+                                }
+
+                              doorhandle_template_vec.push_back(template_cloud);
+                              handle_type_name_vec.push_back(model_type);
+                            }
+                            else
+                            {
+                              // skip the template because of wrong size
+                            }
 
                           
                         } 
                 }
                 closedir(pDIR);
         }
-		return doorhandle_template_vec;
+
+
+    templateInformation handle_template_information;   
+
+    handle_template_information.doorhandle_template_vec = doorhandle_template_vec;
+    handle_template_information.handle_type_name_vec = handle_type_name_vec;
+
+		return handle_template_information;
+}
+
+Eigen::Vector3f FeatureCloudGeneration::readDataFromTXT2Vec(std::string filePathTXT,std::string model_type,std::string file_name)
+{
+
+  // remove file extension and and .txt
+  boost::filesystem::path pathObj(file_name);
+  std::string file_nameTXT =  pathObj.stem().string();
+
+  std::string txtFile =  filePathTXT + model_type + "/door_handle_type_" + model_type + file_nameTXT + ".txt";
+
+  std::ifstream indata;
+  indata.open(txtFile.c_str());
+  std::string line;
+
+  Eigen::Vector3f BB_3D(3,1);
+  std::vector <double> mat_element_vec;
+  double mat_element;
+  Eigen::Vector3f vec(3);
+                    
+  while(!indata.eof())
+    {
+    std::string line = "";
+    std::getline(indata,line);
+
+     if (!line.empty())
+        {
+           mat_element_vec.push_back(std::atof(line.c_str()));
+        }
+    }
+
+     for (int i = 0; i < mat_element_vec.size(); i++)
+      {
+        vec(i) =   mat_element_vec.at(i);
+      }
+
+  return vec;
 }
 
 
@@ -122,7 +186,7 @@ std::vector<pcl::PointCloud<pcl::Normal>::Ptr,Eigen::aligned_allocator<pcl::Poin
 }
 
 
-std::vector<Eigen::Matrix4f> FeatureCloudGeneration::loadGeneratedPCATransformations(std::string filePath,std::string file_name)
+std::vector<Eigen::Matrix4f> FeatureCloudGeneration::loadGeneratedPCATransformations(std::string filePath,std::string filePathTXT,std::string file_name, double BB_3D_cluster)
 {
   std::vector<Eigen::Matrix4f> pca_transformation_vec;
   DIR *pDIR;
@@ -133,49 +197,58 @@ std::vector<Eigen::Matrix4f> FeatureCloudGeneration::loadGeneratedPCATransformat
 		{
       while(entry = readdir(pDIR)){
 
-          if( strcmp(entry->d_name,filePath.c_str()) != 0 && strcmp(entry->d_name, "..") != 0 &&  strcmp(entry->d_name, ".") != 0)
-							{
+        std::string model_type = entry->d_name;
 
+          if( strcmp(model_type.c_str(),filePath.c_str()) != 0 && strcmp(model_type.c_str(), "..") != 0 &&  strcmp(model_type.c_str(), ".") != 0)
+							{
                 // remove file extension and and .txt
                 boost::filesystem::path pathObj(file_name);
 			          std::string file_name =  pathObj.stem().string();
 
 							//load PCD File and perform segmentation
-								std::string txtFile =  filePath + entry->d_name + "/door_handle_type_" + entry->d_name + file_name + ".txt";
+								std::string txtFile =  filePath + model_type + "/door_handle_type_" + model_type + file_name + ".txt";
 
-                std::ifstream indata;
-                indata.open(txtFile.c_str());
+                Eigen::Vector3f vec = readDataFromTXT2Vec(filePathTXT,model_type,file_name);
 
-                std::vector <double> mat_element_vec;
-                double mat_element;
-                int rows = 0;
-                int cols = 0;
-                int counter = 0;
+                double BB_3D_template =  sqrt(vec(0) * vec(0) + vec (1) * vec (1) + vec (2)* vec (2));
 
-            while(!indata.eof())
-            {
-              std::string line = "";
-              std::getline(indata,line);
-
-              if (!line.empty())
-              {
-                mat_element_vec.push_back(std::atof(line.c_str()));
-              }
-						} // end if
-
-              Eigen::Matrix4f trafo_pca(4,4);
-            // fill trafo_pca matrix with data from the txt file
-              for (int row = 0; row < 4; row++)
-              {
-                for (int col = 0; col < 4; col ++)
+                // if cluster diagonal matches template diagonal -> push to vector
+                
+                if (abs(BB_3D_template-BB_3D_cluster < diagonal_max_tol_))
                 {
-                    trafo_pca(row,col) = mat_element_vec.at(counter);
-                    counter += 1;
-                }
-              }
-                // push traf_pca data into final vector
-                pca_transformation_vec.push_back(trafo_pca);
+                  std::ifstream indata;
+                  indata.open(txtFile.c_str());
 
+                  std::vector <double> mat_element_vec;
+                  double mat_element;
+                  int rows = 0;
+                  int cols = 0;
+                  int counter = 0;
+
+                  while(!indata.eof())
+                  {
+                    std::string line = "";
+                    std::getline(indata,line);
+
+                    if (!line.empty())
+                    {
+                      mat_element_vec.push_back(std::atof(line.c_str()));
+                    }
+                  } // end if
+
+                  Eigen::Matrix4f trafo_pca(4,4);
+                  // fill trafo_pca matrix with data from the txt file
+                  for (int row = 0; row < 4; row++)
+                   {
+                    for (int col = 0; col < 4; col ++)
+                    {
+                      trafo_pca(row,col) = mat_element_vec.at(counter);
+                      counter += 1;
+                    }
+                   }
+                      // push traf_pca data into final vector
+                      pca_transformation_vec.push_back(trafo_pca);
+                }
 						} // end if
        }// end while
             closedir(pDIR);
@@ -197,51 +270,15 @@ std::vector<Eigen::Vector3f> FeatureCloudGeneration::loadGeneratedBBInformation(
 		{
       while(entry = readdir(pDIR)){
 
-          if( strcmp(entry->d_name,filePath.c_str()) != 0 && strcmp(entry->d_name, "..") != 0 &&  strcmp(entry->d_name, ".") != 0)
+        std::string model_type = entry->d_name;
+          if( strcmp(model_type.c_str(),filePath.c_str()) != 0 && strcmp(model_type.c_str(), "..") != 0 &&  strcmp(model_type.c_str(), ".") != 0)
 						{
-
-
-                // remove file extension and and .txt
-                boost::filesystem::path pathObj(file_name);
-			          std::string file_name =  pathObj.stem().string();
-
-								std::string txtFile =  filePath + entry->d_name + "/door_handle_type_" + entry->d_name + file_name + ".txt";
-
-                std::ifstream indata;
-                indata.open(txtFile.c_str());
-                std::string line;
-
-                Eigen::Vector3f BB_3D(3,1);
-                std::vector <double> mat_element_vec;
-                double mat_element;
-                Eigen::Vector3f vec(3);
-
-            // read out lines
-           
-
-            while(!indata.eof())
-            {
-
-              std::string line = "";
-              std::getline(indata,line);
-
-              if (!line.empty())
-              {
-                mat_element_vec.push_back(std::atof(line.c_str()));
-              }
-						} // end if
-
-            for (int i = 0; i < mat_element_vec.size(); i++)
-            {
-                vec(i) =   mat_element_vec.at(i);
-
+              Eigen::Vector3f vec = readDataFromTXT2Vec(filePath,model_type,file_name);
+              BB_3D_vec.push_back(vec);
             }
-            BB_3D_vec.push_back(vec);
-          }
        }// end while
        closedir(pDIR);
     }
-
 
 		return BB_3D_vec;
 }
@@ -253,7 +290,7 @@ icpInformation FeatureCloudGeneration::icpBasedTemplateAlignment(pcl::PointCloud
   pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
 
  //Set the maximum distance between two correspondences (src<->tgt) to 10cm
-  icp.setMaxCorrespondenceDistance (0.001);
+  icp.setMaxCorrespondenceDistance (0.0001);
   icp.setTransformationEpsilon (alignment_eps_);
 
   pcl::PointCloud<pcl::PointXYZRGB> Final;

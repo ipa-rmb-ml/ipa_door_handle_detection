@@ -102,15 +102,19 @@ planeInformation PointCloudSegmentation::detectPlaneInPointCloud(pcl::PointCloud
 	pcl::ModelCoefficients::Ptr plane_coeff (new pcl::ModelCoefficients);
 	pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
 
-	// Create the segmentation object
-	pcl::SACSegmentation<pcl::PointXYZ> seg;
-
+	// multiple plane detection --> take the plane with the largest distance and highest number of inliers
 	// Optional
+		// Create the segmentation object
+	pcl::SACSegmentation<pcl::PointXYZ> seg;
 	seg.setOptimizeCoefficients (true);
-	// Mandatory
 	seg.setModelType (pcl::SACMODEL_PLANE);
 	seg.setMethodType (pcl::SAC_RANSAC);
 	seg.setDistanceThreshold (distance_thres_);
+
+	// find and remove all planes in point cloud
+	// planar component with largest number of points is supposed to be the door plane
+	
+	// Segment the largest planar component from the remaining cloud
 	seg.setInputCloud (input_cloud);
 	// get inliers and plane coeff
 	seg.segment (*inliers, *plane_coeff);
@@ -120,19 +124,19 @@ planeInformation PointCloudSegmentation::detectPlaneInPointCloud(pcl::PointCloud
  	planeData.plane_coeff = plane_coeff;
 
 	return planeData;
-};
+}
 
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::minimizePointCloudToObject(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, pcl::PointIndices::Ptr plane_pc_indices,pcl::ModelCoefficients::Ptr plane_coeff)
 {
 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr reduced_pc_rgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr test(new pcl::PointCloud<pcl::PointXYZ>);
 	// calculate point to plane distance
 	pcl::PointXYZRGB pp_PC;
 
-	// Create the filtering object
 
-
+	double plane_distance = plane_coeff->values[3];
 
   	for (size_t i = 0; i < input_cloud->points.size (); ++i)
 	{
@@ -140,12 +144,10 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudSegmentation::minimizePointClou
 		pp_PC.y = input_cloud->points[i].y;
 		pp_PC.z = input_cloud->points[i].z;
 
-
-
 		// storing and coloring data from only outside the plane
 		double point2plane_distance =  pcl::pointToPlaneDistance (pp_PC, plane_coeff->values[0], plane_coeff->values[1], plane_coeff->values[2], plane_coeff->values[3]);
 
-		if ( (point2plane_distance > min_point_to_plane_dist_ ) && (point2plane_distance < max_point_to_plane_dist_))
+		if ( (point2plane_distance > min_point_to_plane_dist_ ) && (point2plane_distance < max_point_to_plane_dist_) && (pp_PC.z > plane_distance))
 		{
 						//std::cout<<point2plane_distance<<std::endl;
 						pp_PC.r = 0;																

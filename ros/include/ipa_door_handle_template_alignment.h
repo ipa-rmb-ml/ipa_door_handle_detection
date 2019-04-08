@@ -80,6 +80,12 @@ struct icpInformation
  double icp_fitness_score;
 };
 
+struct templateInformation
+{
+ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > doorhandle_template_vec;
+ std::vector<std::string> handle_type_name_vec;
+
+};
 
 
 
@@ -92,11 +98,17 @@ public:
 FeatureCloudGeneration();
 
 // file load different types
-std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> >  loadGeneratedTemplatePCLXYZ(std::string filePath,std::string file_name);
+templateInformation loadGeneratedTemplatePCLXYZ(std::string filePath,std::string filePathTXT,std::string file_name,double BB_3D_cluster);
+
 std::vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> >  loadGeneratedTemplatePCLFeatures(std::string filePath,std::string file_name);
+
 std::vector<pcl::PointCloud<pcl::Normal>::Ptr,Eigen::aligned_allocator<pcl::PointCloud<pcl::Normal>::Ptr> >  loadGeneratedTemplatePCLNormals(std::string filePath);
-std::vector<Eigen::Matrix4f> loadGeneratedPCATransformations(std::string filePath,std::string file_name);
+
+std::vector<Eigen::Matrix4f> loadGeneratedPCATransformations(std::string filePath,std::string filePathTXT,std::string file_name, double BB_3D_cluster);
+
 std::vector<Eigen::Vector3f> loadGeneratedBBInformation(std::string filePath,std::string file_name);
+
+Eigen::Vector3f readDataFromTXT2Vec(std::string filePathTXT,std::string model_type,std::string file_name);
 
 icpInformation icpBasedTemplateAlignment(pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_point_cloud,pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_template_point_cloud);
 
@@ -127,5 +139,6 @@ double similarity_thres_; //0.9f
 
 double rad_search_dist_; //0.03
 float voxel_grid_size_; //0.005f;
+double diagonal_max_tol_;
 
 };
