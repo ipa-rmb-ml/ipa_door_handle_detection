@@ -36,9 +36,7 @@ DoorHandleTemplateGeneration::DoorHandleTemplateGeneration(std::string file_path
 	targetPathEigen_	= BASE_PATH_ + "/templateDataPCATrafo/" + handle_type;
 	targetPathBB_ 		= BASE_PATH_ + "/templateDataBB/" + handle_type;
 	targetPathFeatures_ = BASE_PATH_ + "/DataSceneryFeatures/" + handle_type;
-
-
-	// create directory
+ 
 
 	createDirectory(targetPathXYZRGB_);
 	createDirectory(targetPathPCA_);
@@ -58,7 +56,6 @@ void DoorHandleTemplateGeneration::createDirectory(std::string path_to_dir)
 	if(boost::filesystem::create_directory(dir))
 	{
 	}
-
 
 }
 

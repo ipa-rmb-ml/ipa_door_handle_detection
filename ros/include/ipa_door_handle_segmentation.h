@@ -89,6 +89,10 @@ public:
 
 	bool checkBB3DOrientation(Eigen::Matrix4f,pcl::ModelCoefficients::Ptr cylinder_coeff);
 
+	pcl::PointCloud<pcl::PointXYZ>::Ptr removeNoisefromPC(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,double dist);
+
+
+
 
 
 

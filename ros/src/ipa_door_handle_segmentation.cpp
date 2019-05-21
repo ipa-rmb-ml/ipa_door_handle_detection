@@ -28,8 +28,8 @@ inlier_ratio_thres_ = 0.9;
 distance_thres_ = 0.01;
 max_num_iter_ = 1000;
 
-min_cluster_size_ = 10;
-max_cluster_size_ = 500;
+min_cluster_size_ = 50;
+max_cluster_size_ = 200;
 
 // angle between cyliders axis and door planes normals
 // maximal difference for both to be orthogonal 
@@ -461,6 +461,21 @@ pcaInformation PointCloudSegmentation::calculatePCA(pcl::PointCloud<pcl::PointXY
 		return false;
 	}
 
-
-
   }
+
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudSegmentation::removeNoisefromPC(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud, double dist)
+	{
+		pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+		// check standard deviation --> if large 
+		// Create the filtering object along the z axis
+		pcl::PassThrough<pcl::PointXYZ> pass;
+		pass.setInputCloud (input_cloud);
+		pass.setFilterFieldName ("z");
+		pass.setFilterLimits (0, fabs(dist)-0.1);
+		pass.setFilterLimits (fabs(dist)-0.1,fabs(dist));
+		//pass.setFilterLimitsNegative (true);
+		pass.filter (*output_cloud);
+
+		return output_cloud;
+	}
