@@ -1,4 +1,4 @@
-#include "ipa_start_detection_TM.h"
+#include "TemplateMatching/ipa_start_detection_TM.h"
 // =================================================0
 int main(int argc, char **argv)
 {
