@@ -81,14 +81,12 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 	// noise removal from point cloud
 	// removes points from the point cloud in a specific range
-	pcl::PointCloud<pcl::PointXYZ>::Ptr pc_filtered = segObj.removeNoisefromPC(pointcloud_in_pcl_format,dist);
-
-	point_cloud_scenery_ = pc_filtered;
+	point_cloud_scenery_ = segObj.removeNoisefromPC(pointcloud_in_pcl_format,dist); // filtered pc
 
 	// the determined clusters are stores inside a  vector structure
 	// the actual involves a few steps, for detailed explanation see the segmentPointCloud() function
 	std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
-	Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > cluster_vec = segObj.segmentPointCloud(pc_filtered);
+	Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > cluster_vec = segObj.segmentPointCloud(point_cloud_scenery_);
 
 
 	//================SUMMARY======================
@@ -370,6 +368,9 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 				template_pca = template_pca_best_vec[pos];
 				std::string best_fit_name = best_handle_type_vec[pos];
 
+				//x_axis_temp = 
+				//x_axis_clust
+
 
 				pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_filt(new pcl::PointCloud<pcl::PointXYZRGB>);
 				pcl::PointXYZRGB pp_filt;
@@ -388,7 +389,13 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 				ROS_WARN("Door Handle detected!");
 				std::cout<<"Door Handle Type: " << best_fit_name <<std::endl;
 				
+				//
 				handle_point_cloud_ = assumed_handle_point_cloud;
+
+				// cluster points
+				// take point that are close to the detected handle and add them
+
+
 				*published_pc+= *template_pca;
 
 

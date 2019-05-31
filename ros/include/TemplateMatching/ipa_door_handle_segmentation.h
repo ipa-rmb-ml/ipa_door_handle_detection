@@ -125,5 +125,7 @@ double inlier_ratio_thres_;
 
 double angle_thres_x_;
 
+double number_of_pts_in_rad_;
+double radius_size_ ;
 };
 

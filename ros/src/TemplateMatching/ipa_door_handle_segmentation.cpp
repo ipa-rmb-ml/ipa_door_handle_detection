@@ -34,8 +34,12 @@ max_cluster_size_ = 200;
 // angle between cyliders axis and door planes normals
 // maximal difference for both to be orthogonal 
 max_diff_norm_axis_ = 7;
-
 angle_thres_x_ = 10.0;
+
+number_of_pts_in_rad_= 7;
+radius_size_ = 0.03; //m
+
+
 
 }
 
@@ -488,37 +492,28 @@ pcaInformation PointCloudSegmentation::calculatePCA(pcl::PointCloud<pcl::PointXY
 		pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud1 (new pcl::PointCloud<pcl::PointXYZ>);
 
 
+
+		// distance based filtering
 		pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud2 (new pcl::PointCloud<pcl::PointXYZ>);
 		// check standard deviation --> if large 
 		// Create the filtering object along the z axis
 		pcl::PassThrough<pcl::PointXYZ> pass;
 		pass.setInputCloud (input_cloud);
 		pass.setFilterFieldName ("z");
-		std::cout<<dist<<std::endl;
 		pass.setFilterLimits (0, fabs(dist));
 		
 		//pass.setFilterLimitsNegative (true);
 		pass.filter (*output_cloud);
-
+		
 
 		pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
 		// build the filter
 		outrem.setInputCloud(output_cloud);
-		outrem.setRadiusSearch(0.05);
-		outrem.setMinNeighborsInRadius (9);
+		outrem.setRadiusSearch(radius_size_);
+		outrem.setMinNeighborsInRadius (number_of_pts_in_rad_);
 		// apply filter
 		outrem.filter (*output_cloud1);
 
 
-
-		// Create the filtering object
-		pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-
-		sor.setInputCloud (output_cloud1);
-		sor.setMeanK (10);
-		sor.setStddevMulThresh (0.5);
-		sor.filter (*output_cloud2);
-
-
-		return output_cloud2;
+		return output_cloud1;
 	}
