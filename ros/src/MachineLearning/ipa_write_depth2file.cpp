@@ -44,12 +44,14 @@ class ImageConverter
     oss << std::setw(4) << std::setfill('0') <<  img_counter;
 
     std::string img_name = "image_" + oss.str();
-    std::string full_name = file_path + img_name + ".jpg";   
+    std::string full_name = file_path + img_name + ".yml";   
 
-    std::cout<<"Writing " << img_name << ".jpg ..."<<std::endl;
+    std::cout<<"Writing " << img_name << ".yml ..."<<std::endl;
 
-    imwrite(full_name, depth_image );
 
+    cv::FileStorage storage(full_name, cv::FileStorage::WRITE);
+    storage << "img" << depth_image;
+    storage.release();  
     }
 
 
@@ -82,11 +84,11 @@ class ImageConverter
          return;
        }
    
-        // mat image declaration
-        cv::Mat depth_img = cv_ptr->image;
+        // mat image declaration -> convert to mm
+        cv::Mat depth_img = cv_ptr->image*1000;
 
         // CV_<bit-depth>{U|S|F}C(<number_of_channels>)
-        depth_img.convertTo(depth_img, CV_16UC1, 255.0); 
+        //depth_img.convertTo(depth_img, CV_8UC1); 
 
         int imgDepth = depth_img.depth();
        

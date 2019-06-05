@@ -141,42 +141,42 @@ target_link_libraries(ipa_write_depth2file
 
 # FEATURE EXTRACTION
 
-add_executable(ipa_feature_extraction	
-   ros/src/MachineLearning/ipa_feature_extraction.cpp
-   
+add_executable(ipa_train_classifier	
+   ros/src/MachineLearning/ipa_train_classifier.cpp
+
 )
 
-add_dependencies(ipa_feature_extraction	
+add_dependencies(ipa_train_classifier	
         ${${PROJECT_NAME}_EXPORTED_TARGETS}
         ${catkin_EXPORTED_TARGETS}
 )
-target_link_libraries(ipa_feature_extraction	
+target_link_libraries(ipa_train_classifier	
         ${catkin_LIBRARIES}
         ${OpenCV_LIBS}
 )
 
 # door handle detection main MACHINE LEARNING -> ONLINE PART ->classify()
-add_executable(ipa_train_classifier
-   ros/src/ipa_train_classifier_main.cpp
-   ros/src/MachineLearning/AdaBooster.cpp
-   ros/src/MachineLearning/CrossValidator.cpp
-   ros/src/MachineLearning/FeatureParser.cpp
-   ros/src/MachineLearning/FeatureVector.cpp
-   ros/src/MachineLearning/sorting.cpp
-   ros/src/MachineLearning/StrongClassifier.cpp
-   ros/src/MachineLearning/TrainingData.cpp
-   ros/src/MachineLearning/WeakClassifier.cpp
+#add_executable(ipa_train_classifier
+##   ros/src/ipa_train_classifier_main.cpp
+ #  ros/src/MachineLearning/AdaBooster.cpp
+ #  ros/src/MachineLearning/CrossValidator.cpp
+ #  ros/src/MachineLearning/FeatureParser.cpp
+ ##  ros/src/MachineLearning/FeatureVector.cpp
+ #  ros/src/MachineLearning/sorting.cpp
+ #  ros/src/MachineLearning/StrongClassifier.cpp
+ #  ros/src/MachineLearning/TrainingData.cpp
+ #  ros/src/MachineLearning/WeakClassifier.cpp
    
-)
+#)
 
-add_dependencies(ipa_train_classifier
-        ${${PROJECT_NAME}_EXPORTED_TARGETS}
-        ${catkin_EXPORTED_TARGETS}
-)
-target_link_libraries(ipa_train_classifier
-        ${catkin_LIBRARIES}
-        ${OpenCV_LIBS}
-)
+#add_dependencies(ipa_train_classifier
+#        ${${PROJECT_NAME}_EXPORTED_TARGETS}
+#        ${catkin_EXPORTED_TARGETS}
+#)
+#target_link_libraries(ipa_train_classifier
+#        ${catkin_LIBRARIES}
+#        ${OpenCV_LIBS}
+#)
 
 ##### MACHINE LEARNING ##############
 

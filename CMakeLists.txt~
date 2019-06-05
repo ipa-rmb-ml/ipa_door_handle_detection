@@ -139,16 +139,18 @@ target_link_libraries(ipa_write_depth2file
         ${OpenCV_LIBS}
 )
 
+# FEATURE EXTRACTION
+
 add_executable(ipa_feature_extraction	
    ros/src/MachineLearning/ipa_feature_extraction.cpp
    
 )
 
-add_dependencies(ipa_write_depth2file
+add_dependencies(ipa_feature_extraction	
         ${${PROJECT_NAME}_EXPORTED_TARGETS}
         ${catkin_EXPORTED_TARGETS}
 )
-target_link_libraries(ipa_write_depth2file
+target_link_libraries(ipa_feature_extraction	
         ${catkin_LIBRARIES}
         ${OpenCV_LIBS}
 )
