@@ -9,7 +9,9 @@
 #include <glob.h> 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
-#include <opencv2/features2d/features2d.hpp>
+
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/ml/ml.hpp>
 
 
 const std::string posDepthImagePath;
@@ -24,7 +26,7 @@ TrainClassifier();
 
 void extractFeatures(cv::Mat curr_img);
 
-void calculateLBP(cv::Mat src) ;
+std::vector<float> calculateLBP(cv::Mat src) ;
 
 std::vector<cv::Mat> readDepthImages(const std::string dir_name);
 
@@ -32,7 +34,7 @@ void generateTrainingData(std::vector<cv::Mat> image_seq, bool label);
 
 cv::Mat getLabelData(void);
 cv::Mat getTrainingData(void);
-cv::Mat getLBPFeatures(void);
+
 
 cv::Mat label_data_;
 cv::Mat training_data_;

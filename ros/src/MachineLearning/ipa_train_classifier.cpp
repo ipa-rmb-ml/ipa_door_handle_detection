@@ -4,47 +4,33 @@ TrainClassifier::TrainClassifier()
 {
 }
 
-void TrainClassifier::calculateLBP(cv::Mat src) {
+//implementation of LBP
+std::vector<float> TrainClassifier::calculateLBP(cv::Mat src) {
 
-    int neighbors = 15;
-    int radius = 4;
+    std::vector<float> feature_vec;
 
-    // apply gaussian blur
+    for(int i=1;i<src.rows-1;i++) {
+        for(int j=1;j<src.cols-1;j++) {
+            float center = src.at<float>(i,j);
 
-    neighbors = std::max(std::min(neighbors,31),1); // set bounds...
-    // Note: alternatively you can switch to the new OpenCV Mat_
-    // type system to define an unsigned int matrix... I am probably
-    // mistaken here, but I didn't see an unsigned int representation
-    // in OpenCV's classic typesystem...
-    cv::Mat dst = cv::Mat::zeros(src.rows-2*radius, src.cols-2*radius, CV_32SC1);
-    for(int n=0; n<neighbors; n++) {
-        // sample points
-        float x = static_cast<float>(radius) * cos(2.0*M_PI*n/static_cast<float>(neighbors));
-        float y = static_cast<float>(radius) * -sin(2.0*M_PI*n/static_cast<float>(neighbors));
-        // relative indices
-        int fx = static_cast<int>(floor(x));
-        int fy = static_cast<int>(floor(y));
-        int cx = static_cast<int>(ceil(x));
-        int cy = static_cast<int>(ceil(y));
-        // fractional part
-        float ty = y - fy;
-        float tx = x - fx;
-        // set interpolation weights
-        float w1 = (1 - tx) * (1 - ty);
-        float w2 =      tx  * (1 - ty);
-        float w3 = (1 - tx) *      ty;
-        float w4 =      tx  *      ty;
-        // iterate through your data
-        for(int i=radius; i < src.rows-radius;i++) {
-            for(int j=radius;j < src.cols-radius;j++) {
-                float t = w1*src.at<float>(i+fy,j+fx) + w2*src.at<float>(i+fy,j+cx) + w3*src.at<float>(i+cy,j+fx) + w4*src.at<float>(i+cy,j+cx);
-                // we are dealing with floating point precision, so add some little tolerance
-                dst.at<unsigned int>(i-radius,j-radius) += ((t > src.at<float>(i,j)) && (abs(t-src.at<float>(i,j)) > std::numeric_limits<float>::epsilon())) << n;
-            }
+            float pixel_7 = (src.at<float>(i-1,j-1) > center);
+            float pixel_6 = (src.at<float>(i-1,j) > center);
+            float pixel_5 = (src.at<float>(i-1,j+1) > center);
+            float pixel_4 = (src.at<float>(i,j+1) > center);
+            float pixel_3 = (src.at<float>(i+1,j+1) > center);
+            float pixel_2 = (src.at<float>(i+1,j) > center);
+            float pixel_1 = (src.at<float>(i+1,j-1) > center);
+            float pixel_0 = (src.at<float>(i,j-1) > center);
+
+
+            float dec_val =  (int) pixel_7 * 2^7 + (int) pixel_6 * 2^6 + (int) pixel_5 * 2^5 + (int) pixel_4 * 2^4 + (int) pixel_3 * 2^3 + (int) pixel_2 * 2^2 + (int) pixel_1 * 2 + (int) pixel_0;
+
+            feature_vec.push_back(dec_val);
+
         }
     }
 
-    std::cout<<dst<<std::endl;
+    return feature_vec;
 }
 
 void TrainClassifier::extractFeatures(cv::Mat curr_img)
@@ -72,10 +58,8 @@ std::vector<cv::Mat> TrainClassifier::readDepthImages(std::string img_dir)
 
         if (img.empty()) continue; //only proceed if sucsessful
         // you probably want to do some preprocessing
-        c.calculateLBP(img);
-     //   std::cout<<img<<std::endl;
-        cv::Mat test = c.getLBPFeatures();
-     //   std::cout<<test<<std::endl;
+  
+
         img_data.push_back(img);
 
     }
@@ -88,25 +72,37 @@ std::vector<cv::Mat> TrainClassifier::readDepthImages(std::string img_dir)
 void TrainClassifier::generateTrainingData(std::vector<cv::Mat> image_seq, bool label)
 {
 
+std::vector<float> feature_vec;
+cv::Mat feature_mat;
+cv::Mat feature;
+cv::Mat labels_mat;
 
     for (int i =0; i < image_seq.size(); i++)
     {
-    cv::Mat curr_img_img = image_seq[i];
+        cv::Mat curr_img_img = image_seq[i];
+        feature_vec = calculateLBP(curr_img_img);
+        feature = cv::Mat( feature_vec ).reshape( 0, feature_vec.size() );
+        feature = feature.t();
 
-        // extract 
-
+        // write the feature vector of each img into a common matrix
+        feature_mat.push_back(feature); 
+        
     }
 
-    float labels[11] = { -1, 1, 1, -1, 1, -1, 1, -1 };
-    cv::Mat labels_cv = cv::Mat(2, 4, CV_32F, labels);
+   int num_features = feature_mat.rows;
 
-    float training_data[11][2] = {
-        {501, 10}, {508, 15},
-        {255, 10}, {501, 255}, {10, 501}, {10, 501}, {11, 501}, {9, 501}, {10, 502}, {10, 511}, {10, 495} };
-    cv::Mat training_cv = cv::Mat(11, 2, CV_32F, training_data);
+    if (label)
+      {
+           labels_mat = cv::Mat::ones(num_features,1, CV_32SC1);
+      }
+      else
+      {
+           labels_mat = cv::Mat::zeros(num_features,1, CV_32SC1);
+      }
 
-    label_data_ = labels_cv;
-    training_data_ = training_cv;
+
+    label_data_ = labels_mat;
+    training_data_ = feature_mat;
 
     }
 
@@ -121,11 +117,6 @@ cv::Mat TrainClassifier::getLabelData(void)
 }
 
 
- cv::Mat TrainClassifier::getLBPFeatures(void) 
-{
-    return lbp_data_;
-}
-
 
 
 int main(int argc, char **argv)
@@ -133,6 +124,7 @@ int main(int argc, char **argv)
 
   std::string posDepthImagePath= "/home/rmb-ml/Desktop/TemplateDataBase/DepthImages/Positive/";
   std::string negDepthImagePath= "/home/rmb-ml/Desktop/TemplateDataBase/DepthImages/Negative/";
+  std::string classifier_path= "/home/rmb-ml/Desktop/TemplateDataBase/classifierModel/";
 
    TrainClassifier();
   
@@ -142,11 +134,11 @@ int main(int argc, char **argv)
 
    std::vector<cv::Mat> posImg, negImg;
 
+    //reading files from dir
    posImg = c1.readDepthImages(posDepthImagePath);
    negImg = c2.readDepthImages(negDepthImagePath);
 
    // get positive and negative training data
-
    c1.generateTrainingData(posImg,1);
    c2.generateTrainingData(negImg,0);
 
@@ -156,13 +148,67 @@ int main(int argc, char **argv)
    cv::Mat label_neg    = c2.getLabelData();
    cv::Mat training_neg = c2.getTrainingData();
 
+
+   // concentrate data
+    cv::Mat training_data_all;
+    training_data_all.push_back(training_pos);
+    training_data_all.push_back(training_neg);
+
+    cv::Mat label_data_all;
+    label_data_all.push_back(label_pos);
+    label_data_all.push_back(label_neg);
+
+
+    // ==================================== SVM ================================
+
+   CvSVMParams params;
+    params.svm_type    = CvSVM::C_SVC;
+    params.kernel_type = CvSVM::LINEAR;
+    params.term_crit   = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
+
+    CvSVM SVM;
+    std::cout<<"Start Training"<<std::endl;
+    std::cout<<"Num Pos Samples: " << training_pos.rows <<std::endl;
+    std::cout<<"Num Neg Samples: " << training_neg.rows <<std::endl;
+     std::cout<<"===============================================" << std::endl;
+
+    std::string full_path_svm = classifier_path +"SVM_Model.xml";
+
+    SVM.train(training_data_all, label_data_all, cv::Mat(), cv::Mat(), params);
+    SVM.save(full_path_svm.c_str());
+
+    // ==================================== SVM ================================
+
+    // ==================================== Boost ================================
+
     CvBoost boost;
- //   boost.train(training_data_,
-  //          CV_ROW_SAMPLE,
-  //          label_data_);
+    
+    boost.train(training_data_all, CV_ROW_SAMPLE, label_data_all);
+
+    std::string full_path_boost = classifier_path +"Boost_Model.xml";
+    boost.save(full_path_boost.c_str());
+
+    // ==================================== Boost ================================
+
+    // ==================================== Random Trees ================================
 
 
+    // ==================================== Random Trees ================================
 
+
+    std::cout<<"Training completed"<<std::endl;
+
+    cv::Mat testSample = training_data_all.row(21);
+
+     float responseSVM = SVM.predict(testSample);
+     float responseBoost = boost.predict(testSample);
+
+     std::cout<<"===============================================" << std::endl;
+
+     std::cout<<"response SVM:" << responseSVM<<std::endl;
+     std::cout<<"response SVM:" << responseBoost<<std::endl;
+
+     std::cout<<"===============================================" << std::endl;
 
     return 0;
 }
