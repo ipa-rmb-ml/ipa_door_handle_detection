@@ -1,4 +1,3 @@
-
 #include "TemplateMatching/ipa_start_detection_TM.h"
 #include "TemplateMatching/ipa_door_handle_segmentation.h"
 #include "TemplateMatching/ipa_door_handle_template_alignment.h"
@@ -13,7 +12,7 @@ StartHandleDetectionTM::StartHandleDetectionTM(ros::NodeHandle nh, sensor_msgs::
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
 	std::string camera_link = "pico_flexx_optical_frame_link" ;
-	std::string PATH_TO_TEMPLATE_DIR = "/home/robot/Desktop/rmb-ml/TemplateDataBase";
+	std::string PATH_TO_TEMPLATE_DIR = "/home/rmb-ml/Desktop/TemplateDataBase";
 
 	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataXYZRGB/"; // only for testing -> change later
 	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/";
@@ -233,8 +232,6 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 			// obtain path information based on orientation params
 			std::string name_pcd = FeatureCloudGeneration::getFilePathFromParameter(dist,angle_XZ,angle_YZ);
-
-		
 
 			// struct containing two vectors 
 			// 1. vector of template point clouds

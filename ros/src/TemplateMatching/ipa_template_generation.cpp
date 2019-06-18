@@ -30,7 +30,7 @@ DoorHandleTemplateGeneration::DoorHandleTemplateGeneration(std::string file_path
 {
 
 	TEMPLATE_PATH_ 		= file_path_to_point_clouds + handle_type + "/";
-	BASE_PATH_ 		= "/home/robot/Desktop/rmb-ml/TemplateDataBase" ;
+	BASE_PATH_ 			= "/home/rmb-ml/Desktop/TemplateDataBase" ;
 	targetPathXYZRGB_  	= BASE_PATH_ + "/templateDataXYZRGB/" + handle_type;
 	targetPathPCA_ 		= BASE_PATH_ + "/templateDataPCAXYZRGB/" + handle_type;
 	targetPathEigen_	= BASE_PATH_ + "/templateDataPCATrafo/" + handle_type;
@@ -52,7 +52,6 @@ void DoorHandleTemplateGeneration::createDirectory(std::string path_to_dir)
 	boost::filesystem::path dir(path);
 	if(boost::filesystem::create_directory(dir))
 	{
-
 	}
 
 }
@@ -149,15 +148,12 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 
 			std::string filePathPCDWriteXYZRGB = targetPathXYZRGB_  + "/" + templateName;
 			std::string filePathPCDWriteNormals = targetPathNormals_  + "/" + templateName;
-			std::string filePathPCDWriteFeatures = targetPathFeatures_  + "/" + templateName;
 			std::string filePathPCDWritePCAXYZ = targetPathPCA_  + "/" + templateName;
-			std::string filePathFeatureWrite = targetPathFeatures_ + "/" + templateName;
 
 			 // get filename without extension
 
 			std::string filePathTXTWriteEigen = targetPathEigen_ + "/" + templateName + ".txt";
 			std::string filePathTXTWriteBB = targetPathBB_ + "/" + templateName + ".txt";
-
 
 			if (pcl::io::loadPCDFile<pcl::PointXYZ> (full_pcd_path, *template_cloud) == -1) //* load the file
 				{
@@ -166,10 +162,6 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 
 
 			/// TEMPLATE MATCHING APPROACH 
-
-				// template pointclouds got the "ROI extension"
-				if(full_pcd_path.find("") != std::string::npos)
-				{
 
 				planeInformation planeData = seg.detectPlaneInPointCloud(template_cloud);
 
@@ -261,17 +253,9 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 
 				else
 				{
-				std::string path = filePathFeatureWrite + ".txt";
-				std::ofstream test;
-				test.open(path.c_str());
-				test <<	"\n";
-				test<<"working";
-					
-				// To be completed for the Machine Learning approach 
 
-
+		
 				}
-			}
         } //end while
         closedir(pDIR);
     } //end if
@@ -286,7 +270,7 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,Eigen::aligned_allocator<pcl:
 int main(int argc, char **argv)
 {		
 	// base path to folder containing the model type folders
-	std::string file_path_to_point_clouds = "/home/robot/Desktop/rmb-ml/TemplateDataBase/unprocessed/";
+	std::string file_path_to_point_clouds = "/home/rmb-ml/Desktop/TemplateDataBase/unprocessed/";
 
 	// folder structure:
 	// type 001

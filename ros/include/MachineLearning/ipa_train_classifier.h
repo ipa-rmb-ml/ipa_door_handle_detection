@@ -13,6 +13,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/ml/ml.hpp>
 
+#include "opencv2/ml/ml.hpp"
+
 
 std::string posDepthImagePathTrain;
 std::string negDepthImagePathTrain;
@@ -22,6 +24,8 @@ std::string negDepthImagePathTest;
 
 std::string classifier_path;
 
+int width;
+int height;
 
 struct DataStruct
 {
@@ -37,7 +41,6 @@ public:
 
 TrainClassifier();
 
-void extractFeatures(cv::Mat curr_img);
 
 std::vector<float> calculateLBP(cv::Mat src) ;
 
@@ -45,13 +48,15 @@ std::vector<cv::Mat> readDepthImages(const std::string dir_name);
 
 void generateTrainingData(std::vector<cv::Mat> image_seq, bool label);
 
-static void trainAllClassifier(cv::Mat traing_data,cv::Mat labels,bool trainSVM, bool trainRF,bool trainAB);
+static void trainAllClassifier(cv::Mat trainingData,cv::Mat testingData,cv::Mat trainingLabels,cv::Mat testingLabels,bool trainSVM, bool trainRF,bool trainAB,bool trainNB);
 
 static DataStruct buildTrainingData();
 
 static DataStruct buildTestingData();
 
-static void calculatingPredictions(cv::Mat training_data, cv::Mat label_data,CvSVM &SVM);
+static void calculatingPredictionsSVM(cv::Mat training_data, cv::Mat label_data,CvSVM &SVM);
+static void calculatingPredictionsAB(cv::Mat data,cv::Mat labels, CvBoost &boost);
+static void calculatingPredictionsRF(cv::Mat data,cv::Mat labels, CvRTrees &randomForest);
 
 cv::Mat getLabelData(void);
 cv::Mat getTrainingData(void);

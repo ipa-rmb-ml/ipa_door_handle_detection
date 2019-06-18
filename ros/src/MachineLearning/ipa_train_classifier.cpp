@@ -41,11 +41,6 @@ std::vector<float> TrainClassifier::calculateLBP(cv::Mat src) {
     return feature_vec;
 }
 
-void TrainClassifier::extractFeatures(cv::Mat curr_img)
-{
-
-
-}
 
 std::vector<cv::Mat> TrainClassifier::readDepthImages(std::string img_dir)
 {
@@ -66,10 +61,11 @@ std::vector<cv::Mat> TrainClassifier::readDepthImages(std::string img_dir)
 
         if (img.empty()) continue; //only proceed if sucsessful
         // you probably want to do some preprocessing
-  
 
+
+        int height = img.rows;
+        int width = img.cols;
         img_data.push_back(img);
-
     }
 
 
@@ -125,20 +121,19 @@ cv::Mat TrainClassifier::getLabelData(void)
 }
 
 
-void TrainClassifier::calculatingPredictions(cv::Mat training_data,cv::Mat label_data, CvSVM &SVM)
+void TrainClassifier::calculatingPredictionsSVM(cv::Mat data,cv::Mat labels, CvSVM &SVM)
 {
 
-            std::cout << "Calculating Predictions ...\n"<<std::endl;
             unsigned int truePositive = 0;
             unsigned int trueNegative = 0;
             unsigned int falsePositive = 0;
             unsigned int falseNegative = 0;
 
-            for( int num_img = 0; num_img < training_data.rows; num_img++)
+            for( int num_img = 0; num_img < data.rows; num_img++)
                 {
-                    cv::Mat test_sample = training_data.row(num_img);
-                    int predictedLabel = SVM.predict(test_sample);
-                    int trueLabel =  label_data.at<int>(num_img,0);
+                    cv::Mat sample = data.row(num_img);
+                    int predictedLabel = SVM.predict(sample);
+                    int trueLabel =  labels.at<int>(num_img,0);
 
                     if ( predictedLabel == 1 && trueLabel == 1 ) ++truePositive;
                     else if ( predictedLabel == 1 && trueLabel == 0 ) ++falsePositive;
@@ -154,7 +149,7 @@ void TrainClassifier::calculatingPredictions(cv::Mat training_data,cv::Mat label
 
                 std::cout
                     << "-----------------------------------------------------------------------\n"
-                    << "Training Set Classification:\n"
+                    << "SVM Training Set Classification:\n"
                     << "-----------------------------------------------------------------------\n"
                     << "True Positive     : " << truePositive << "\n"
                     << "False Positive    : " << falsePositive << "\n"
@@ -166,32 +161,137 @@ void TrainClassifier::calculatingPredictions(cv::Mat training_data,cv::Mat label
                     << "Recall            : " << recall << "\n"
                     << "-----------------------------------------------------------------------\n";
             
-
-
 }
 
+void TrainClassifier::calculatingPredictionsAB(cv::Mat data,cv::Mat labels, CvBoost &boost)
+{
 
+            unsigned int truePositive = 0;
+            unsigned int trueNegative = 0;
+            unsigned int falsePositive = 0;
+            unsigned int falseNegative = 0;
 
+            for( int num_img = 0; num_img < data.rows; num_img++)
+                {
+                    cv::Mat sample = data.row(num_img);
+                    int predictedLabel = boost.predict(sample);
+                    int trueLabel =  labels.at<int>(num_img,0);
 
-void TrainClassifier::trainAllClassifier(cv::Mat training_data,cv::Mat label_data,bool trainSVM, bool trainRF,bool trainAB)
+                    if ( predictedLabel == 1 && trueLabel == 1 ) ++truePositive;
+                    else if ( predictedLabel == 1 && trueLabel == 0 ) ++falsePositive;
+                    else if ( predictedLabel == 0 && trueLabel == 1) ++falseNegative;
+                    else if ( predictedLabel == 0 && trueLabel == 0) ++trueNegative;
+                    else std::cout << "Invalid Classification (make sure you are using binary labels)" << std::endl; //invali
+                }
+
+                double accuracy = (truePositive + trueNegative) * 100.0 / (truePositive + falsePositive + trueNegative + falseNegative);
+                double precision = truePositive * 100.0 / (truePositive + falsePositive);
+                double true_negative_rate = trueNegative * 100.0 / (trueNegative + falsePositive);
+                double recall = truePositive * 100.0 / (truePositive + falseNegative);
+
+                std::cout
+                    << "-----------------------------------------------------------------------\n"
+                    << "AdaBoost Training Set Classification:\n"
+                    << "-----------------------------------------------------------------------\n"
+                    << "True Positive     : " << truePositive << "\n"
+                    << "False Positive    : " << falsePositive << "\n"
+                    << "True Negative     : " << trueNegative << "\n"
+                    << "False Negative    : " << falseNegative << "\n"
+                    << "Accuracy          : " << accuracy << "\n"
+                    << "Precision         : " << precision << "\n"
+                    << "True negative rate: " << true_negative_rate << "\n"
+                    << "Recall            : " << recall << "\n"
+                    << "-----------------------------------------------------------------------\n";
+            
+}
+
+void TrainClassifier::calculatingPredictionsRF(cv::Mat data,cv::Mat labels, CvRTrees &randomForest)
+{
+
+            unsigned int truePositive = 0;
+            unsigned int trueNegative = 0;
+            unsigned int falsePositive = 0;
+            unsigned int falseNegative = 0;
+
+            for( int num_img = 0; num_img < data.rows; num_img++)
+                {
+                    cv::Mat sample = data.row(num_img);
+                    int predictedLabel = randomForest.predict(sample);
+                    int trueLabel =  labels.at<int>(num_img,0);
+
+                    std::cout<<predictedLabel<<std::endl;
+
+                    if ( predictedLabel == 1 && trueLabel == 1 ) ++truePositive;
+                    else if ( predictedLabel == 1 && trueLabel == 0 ) ++falsePositive;
+                    else if ( predictedLabel == 0 && trueLabel == 1) ++falseNegative;
+                    else if ( predictedLabel == 0 && trueLabel == 0) ++trueNegative;
+                    else std::cout << "Invalid Classification (make sure you are using binary labels)" << std::endl; //invali
+                }
+
+                double accuracy = (truePositive + trueNegative) * 100.0 / (truePositive + falsePositive + trueNegative + falseNegative);
+                double precision = truePositive * 100.0 / (truePositive + falsePositive);
+                double true_negative_rate = trueNegative * 100.0 / (trueNegative + falsePositive);
+                double recall = truePositive * 100.0 / (truePositive + falseNegative);
+
+                std::cout
+                    << "-----------------------------------------------------------------------\n"
+                    << "RandomForest Training Set Classification:\n"
+                    << "-----------------------------------------------------------------------\n"
+                    << "True Positive     : " << truePositive << "\n"
+                    << "False Positive    : " << falsePositive << "\n"
+                    << "True Negative     : " << trueNegative << "\n"
+                    << "False Negative    : " << falseNegative << "\n"
+                    << "Accuracy          : " << accuracy << "\n"
+                    << "Precision         : " << precision << "\n"
+                    << "True negative rate: " << true_negative_rate << "\n"
+                    << "Recall            : " << recall << "\n"
+                    << "-----------------------------------------------------------------------\n";
+            
+}
+
+void TrainClassifier::trainAllClassifier(cv::Mat trainingData,cv::Mat testingData,cv::Mat trainingLabels,cv::Mat testingLabels, bool trainSVM, bool trainRF,bool trainAB,bool trainNB)
 {
 
         // ==================================== SVM ================================
+            if(trainNB)
+         {
+
+
+            std::cout<<"TrainBayes..." << std::endl;
+
+            CvNormalBayesClassifier bayes;
+            std::string full_path_bayes = classifier_path +"Bayes_Model.xml";
+            bayes.train(trainingData, trainingLabels);
+
+           // TrainClassifier::calculatingPredictionsSVM(testingData,testingLabels,SVM);
+
+            bayes.save(full_path_bayes.c_str());
+
+         }
          if(trainSVM)
          {
 
 
             std::cout<<"TrainSVM..." << std::endl;
             CvSVMParams params;
-            params.svm_type    = CvSVM::C_SVC;
-            params.kernel_type = CvSVM::LINEAR;
-            params.term_crit   = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
+
+            // ===== PARAMS SVM=====
+            //C-Support Vector Classification. n-class classification (n \geq 2), allows imperfect separation of classes with penalty multiplier C for outliers.
+            params.svm_type    = CvSVM::C_SVC; 
+            //Radial basis function (RBF), a good choice in most cases.
+            params.kernel_type = CvSVM::RBF;
+            //Termination criteria of the iterative SVM training procedure which solves a partial case of constrained quadratic optimization problem.
+            // You can specify tolerance and/or the maximum number of iterations.+
+            double tol = 1e-6;
+            int num_iter = 100;
+            params.term_crit   = cvTermCriteria(CV_TERMCRIT_ITER, num_iter, tol);
+            // ==== PARAMS SVM ===========
 
             CvSVM SVM;
             std::string full_path_svm = classifier_path +"SVM_Model.xml";
-            SVM.train(training_data, label_data, cv::Mat(), cv::Mat(), params);
-            
-            TrainClassifier::calculatingPredictions(training_data,label_data,SVM);
+            SVM.train(trainingData, trainingLabels, cv::Mat(), cv::Mat(), params);
+
+            TrainClassifier::calculatingPredictionsSVM(testingData,testingLabels,SVM);
 
             SVM.save(full_path_svm.c_str());
          }
@@ -204,8 +304,22 @@ void TrainClassifier::trainAllClassifier(cv::Mat training_data,cv::Mat label_dat
 
             std::cout<<"TrainAdaBoost... "<< std::endl;
             CvBoost boost;
+            CvBoostParams params;
+
+            params.boost_type = CvBoost::REAL;
+            params.weak_count =100;
+            params.weak_count = 100;
+            params.weight_trim_rate = 0.95;
+            params.cv_folds = 0;
+            params.max_depth = 1;
+
+            // ==== PARAMS BOOST ===========
+
+            // ==== PARAMS BOOST ===========
             
-            boost.train(training_data, CV_ROW_SAMPLE, label_data);
+            boost.train(trainingData, CV_ROW_SAMPLE, trainingLabels);
+
+            TrainClassifier::calculatingPredictionsAB(testingData,testingLabels,boost);
 
            // TrainClassifier::calculatingPredictions();
 
@@ -224,17 +338,29 @@ void TrainClassifier::trainAllClassifier(cv::Mat training_data,cv::Mat label_dat
              std::cout<<"TrainRandomForrest..." << std::endl;
 
             CvRTParams paramsRF;
-            paramsRF.min_sample_count  = 10;
-            paramsRF.max_depth = 5;
-            paramsRF.term_crit = cvTermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 50, 0.1 );
+
+            int num_samples = trainingData.rows;
+            double forest_accuracy = 1e-6;
+            int max_num_trees = 1000;
+
+            // ==== PARAMS RF ==========
+
+            paramsRF.min_sample_count  =  6; /// suggested value is 1% of all training data
+            paramsRF.max_depth =30;
+            paramsRF.max_categories = 2;
+            paramsRF.term_crit.max_iter = 100;
+
+            paramsRF.term_crit = cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,max_num_trees,forest_accuracy);
+
+             // ==== PARAMS RF ===========
 
             CvRTrees randomForest;
         
             std::string full_path_rf = classifier_path +"RF_Model.xml";
-            randomForest.train(training_data, CV_ROW_SAMPLE, label_data, cv::Mat(), cv::Mat(), cv::Mat(), cv::Mat(), paramsRF );
+            randomForest.train(trainingData, CV_ROW_SAMPLE, trainingLabels, cv::Mat(), cv::Mat(), cv::Mat(), cv::Mat(), paramsRF );
 
              //TrainClassifier::calculatingPredictions();
-
+             TrainClassifier::calculatingPredictionsRF(testingData,testingLabels,randomForest);
             
             randomForest.save(full_path_rf.c_str());
 
@@ -310,7 +436,7 @@ DataStruct TrainClassifier::buildTestingData()
     cv::Mat testing_pos = data_pos.getTrainingData();
 
     cv::Mat label_neg    = data_neg.getLabelData();
-    cv::Mat testing_neg = data_neg.getTrainingData();
+    cv::Mat testing_neg  = data_neg.getTrainingData();
 
     // concentrate data
     cv::Mat testing_data;
@@ -331,6 +457,8 @@ DataStruct TrainClassifier::buildTestingData()
 	testingData.labels = testing_data_labels;
  	testingData.features = testing_data;
 
+    return testingData;
+
 }
 
 
@@ -339,7 +467,8 @@ int main(int argc, char **argv)
 
     bool trainSVM =0;
     bool trainRF = 0;
-    bool trainAB = 0;
+    bool trainAB = 0;  
+    bool trainNB = 0;
 
     if (argc < 2)
     {
@@ -365,21 +494,29 @@ int main(int argc, char **argv)
             {
                 trainRF = 1;
             }
+            else if(class_str == "NB")
+            {
+                trainNB = 1;
+            }
+
 
         }
      
     }    
         TrainClassifier();
 
-        DataStruct trainingData = TrainClassifier::buildTrainingData();
+        DataStruct trainStruct = TrainClassifier::buildTrainingData();
 
-        DataStruct testingData = TrainClassifier::buildTestingData();
+        DataStruct testStruct = TrainClassifier::buildTestingData();
 
+        //============================DEFINE TRAINING AND TESTING DATA ======
+        cv::Mat trainingData = trainStruct.features;
+        cv::Mat trainingLabels = trainStruct.labels;
 
-        cv::Mat training_data = trainingData.features;
-        cv::Mat labels = trainingData.labels;
+        cv::Mat testingData =   testStruct.features;
+        cv::Mat testingLabels = testStruct.labels;
 
-        TrainClassifier::trainAllClassifier(training_data,labels,trainSVM,trainRF,trainAB);
+        TrainClassifier::trainAllClassifier(trainingData,testingData,trainingLabels,testingLabels,trainSVM,trainRF,trainAB,trainNB);
 
     return 0;
 }

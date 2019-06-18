@@ -53,7 +53,7 @@
 #define TOPIC_POINT_CLOUD_IN "/pico_flexx/points"
 #define TOPIC_POINT_CLOUD_OUT1 "/template_matching"
 #define TOPIC_POINT_CLOUD_OUT2 "/door_handle"
-#define POINT_CLOUD_TEMPLATE_PATH "/home/robot/Desktop/rmb-ml"
+#define POINT_CLOUD_TEMPLATE_PATH "/home/rmb-ml/Desktop/TemplateDataBase"
 #define CAMERA_LINK "/pico_flexx_optical_frame"
 
 // creates vector with pointclouds where each represents a cluster idintified by region growing
