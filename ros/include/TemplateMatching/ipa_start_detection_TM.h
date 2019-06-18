@@ -34,6 +34,17 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/segmentation/region_growing.h>
 
+
+#include <pcl/tracking/tracking.h>
+#include <pcl/tracking/particle_filter.h>
+#include <pcl/tracking/kld_adaptive_particle_filter_omp.h>
+#include <pcl/tracking/particle_filter_omp.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/conditional_removal.h>
+#include <pcl/octree/octree_pointcloud_changedetector.h>
+
+
 #include <boost/thread/mutex.hpp>
 
 
