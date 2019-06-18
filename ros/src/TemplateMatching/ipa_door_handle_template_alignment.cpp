@@ -37,18 +37,20 @@ std::vector<std::string> handle_type_name_vec;
  DIR *pDIR;
         struct dirent *entry;
         if(pDIR=opendir(filePath.c_str()))
+
 	    	{
               // obtaining folders in directory
                 while(entry = readdir(pDIR))
                 {
                   std::string model_type = entry->d_name;
 
-                        if( strcmp(model_type.c_str(),filePath.c_str()) != 0 && strcmp(model_type.c_str(), "..") != 0 &&  strcmp(model_type.c_str(), ".") != 0)
-							          {
+                        if( strcmp(model_type.c_str(),filePath.c_str()) != 0 && model_type.find("..") != 0  &&  model_type.find(".") != 0)
+
+			{
                               //load PCD File
                             pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 
-                            std::string filePathTemplatePCD =  filePath + model_type + "/door_handle_type_" + model_type + file_name;   
+                            std::string filePathTemplatePCD =  filePath + model_type + "/door_handle_type_" + model_type + file_name;   	
 
                             // read PCA information from TXT
                             Eigen::Vector3f vec = readDataFromTXT2Vec(filePathTXT,model_type,file_name);
@@ -419,7 +421,7 @@ std::string FeatureCloudGeneration::getFilePathFromParameter(int dist, int angle
 		std::string angle_2_str = str2.str();
 		std::string dist_str = str3.str();
 
-		std::string name_pcd  = "_distance_" + dist_str + "cm_" + "angleXZ_" + angle_1_str + "°_" + "angleYZ_"+ angle_2_str + "°_ROI.pcd";
+		std::string name_pcd  = "_distance_" + dist_str + "cm_" + "angleXZ_" + angle_1_str + "°_" + "angleYZ_"+ angle_2_str + "°.pcd";
 
 		return name_pcd;
 }

@@ -3,16 +3,8 @@
 #include "TemplateMatching/ipa_door_handle_segmentation.h"
 #include "TemplateMatching/ipa_door_handle_template_alignment.h"
 
-#include <pcl/tracking/tracking.h>
-#include <pcl/tracking/particle_filter.h>
-#include <pcl/tracking/kld_adaptive_particle_filter_omp.h>
-#include <pcl/tracking/particle_filter_omp.h>
-#include <pcl/filters/statistical_outlier_removal.h>
-#include <pcl/filters/radius_outlier_removal.h>
-#include <pcl/filters/conditional_removal.h>
-#include <pcl/octree/octree_pointcloud_changedetector.h>
 
-
+#include <tf/transform_broadcaster.h>
 
 
 
@@ -20,8 +12,8 @@
 StartHandleDetectionTM::StartHandleDetectionTM(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg) :
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
-	std::string camera_link = "pico_flexx_optical_frame" ;
-	std::string PATH_TO_TEMPLATE_DIR = "/home/rmb-ml/Desktop/TemplateDataBase";
+	std::string camera_link = "pico_flexx_optical_frame_link" ;
+	std::string PATH_TO_TEMPLATE_DIR = "/home/robot/Desktop/rmb-ml/TemplateDataBase";
 
 	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataXYZRGB/"; // only for testing -> change later
 	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/";
@@ -38,9 +30,9 @@ nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 	max_handle_height_ = 5;
 	diag_BB3D_lim_ = 15;
 
+
 	initCameraNode(nh,point_cloud_out_msg);	
 }
-
 
 
 
@@ -58,6 +50,8 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 	//transform imported pointcloud point_cloud_msg to pointcloud_in_pcl_format
 	pcl::fromROSMsg(*point_cloud_msg, *pointcloud_in_pcl_format);
+
+
 	
 	// ==================== ACTUAL CALCULATION:START ==========================================================================================================
 
@@ -72,16 +66,31 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 	// create segmentation object
 	PointCloudSegmentation segObj;
 
+
 	// performes plane detection to return plane coefficients and model inliers in a struct 
 	planeInformation planeData = segObj.detectPlaneInPointCloud(pointcloud_in_pcl_format);
 	pcl::ModelCoefficients::Ptr plane_coefficients = planeData.plane_coeff;
 
+	point_cloud_scenery_ = pointcloud_in_pcl_format;
+	
+
 	// coeff based distance calculation
 	double dist = double (plane_coefficients->values[3]);
+	bool is_door_plane;
 
+	if (fabs(dist) < 0.5 || fabs(dist) > 0.9 )
+	{
+	  is_door_plane = 0;
+	  ROS_WARN("No Door Plane");
+	}
+
+	else
+	{
+	 is_door_plane = 1;
 	// noise removal from point cloud
 	// removes points from the point cloud in a specific range
-	point_cloud_scenery_ = segObj.removeNoisefromPC(pointcloud_in_pcl_format,dist); // filtered pc
+	point_cloud_scenery_ = segObj.removeNoisefromPC(point_cloud_scenery_,dist); // filtered pc
+	};
 
 	// the determined clusters are stores inside a  vector structure
 	// the actual involves a few steps, for detailed explanation see the segmentPointCloud() function
@@ -115,16 +124,17 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 	std::vector<std::string> handle_type_name_vec;
 
+
 	// ==================================================ITERATION OVER CLUSTERS ===============================================
 
 
-	
-	if (cluster_vec.size () > 0)
+	if (cluster_vec.size () > 0 && is_door_plane)
 	{
 
 		// performs the iteration over the cluster vector to check each of the stored point clouds
 		for (int num_cluster = 0; num_cluster < cluster_vec.size (); ++num_cluster) // 
 		{
+
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster = cluster_vec[num_cluster];		
 
 			// estimate preconditio
@@ -170,7 +180,7 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 			// else continue
 			if (!isParallel)
 			{
-				ROS_WARN("Orientation of BB3D not parallel!");
+				//ROS_WARN("Orientation of BB3D not parallel!");
 				continue;
 			}
 
@@ -179,7 +189,6 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 			{	
 				continue;
 			}
-
 
 			// apply transformation on assumed handle cloud to place it in the orgin and rotate based on EVs
 			pcl::transformPointCloud (*cluster, *cluster_pca, cluster_pca_trafo);
@@ -210,9 +219,11 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 			int dist = -plane_coefficients->values[3]*100; // to cm
 
+
 			int r = 0;
 			int g = 0;
 			int b = 255;
+
 
 			// ============================================================================================
 
@@ -222,6 +233,8 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 			// obtain path information based on orientation params
 			std::string name_pcd = FeatureCloudGeneration::getFilePathFromParameter(dist,angle_XZ,angle_YZ);
+
+		
 
 			// struct containing two vectors 
 			// 1. vector of template point clouds
@@ -237,6 +250,7 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 			if (template_vec_xyz.size() == 0)
 			{
+			
 				continue;
 			}
 
@@ -246,6 +260,12 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 			// ===================== CLASSIFICATION ==========================
 
 			// ================================== ITERATION OVER TEMPLATES =============================================================
+
+		
+			// if there is no proper door_distance do not match the templates
+			
+
+
 
 			for (int num_template = 0; num_template < template_vec_xyz.size(); ++num_template) // template loop
 				{
@@ -386,14 +406,71 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 				pcl::transformPointCloud (*template_pca,*template_pca, icp_transformation_best_fit);
 
 				// B  Distance --> paper
+				std::cout<<"======================================================"<<std::endl;
 				ROS_WARN("Door Handle detected!");
 				std::cout<<"Door Handle Type: " << best_fit_name <<std::endl;
 				
 				//
 				handle_point_cloud_ = assumed_handle_point_cloud;
 
-				// cluster points
-				// take point that are close to the detected handle and add them
+				// centroid calculation
+				Eigen::Vector4f handle_centroid;
+
+				pcl::compute3DCentroid(*handle_point_cloud_, handle_centroid);
+
+				ROS_WARN("Handle Centroid");
+				std::cout<<"X:"<<handle_centroid(0)<<std::endl;
+				std::cout<<"Y:"<<handle_centroid(1)<<std::endl;
+				std::cout<<"Z:"<<handle_centroid(2)<<std::endl;
+				std::cout<<"======================================================"<<std::endl;
+
+
+
+
+				// ==================================DEFINE NEW COORDINATE SYSTEM =======================
+				// origin at door handles centroid
+				// orientation defined by eigenvectors
+
+				pcaInformation pcaData =  segObj.calculatePCA(assumed_handle_point_cloud);
+
+				Eigen::Matrix4f handle_pca = pcaData.pca_transformation;
+
+
+				// put into function
+
+				// define new coordinate system placed at the orgin of the centroids defined by the EVs
+				Eigen::Vector3f x_vec  = handle_pca.block<3,1>(0,0); // placed along the EV pointing in the direction with the highest variance
+				Eigen::Vector3f y_vec  = handle_pca.block<3,1>(0,1);
+				Eigen::Vector3f z_vec  = handle_pca.block<3,1>(0,2);
+
+				tf::Matrix3x3 tf3d;
+				tf3d.setValue(static_cast<double>(handle_pca(0,0)), static_cast<double>(handle_pca(0,1)), static_cast<double>(handle_pca(0,2)), 
+					static_cast<double>(handle_pca(1,0)), static_cast<double>(handle_pca(1,1)), static_cast<double>(handle_pca(1,2)), 
+					static_cast<double>(handle_pca(2,0)), static_cast<double>(handle_pca(2,1)), static_cast<double>(handle_pca(2,2)));
+
+				 tf::Quaternion tfqt;
+ 				 tf::Quaternion q;
+
+
+				 tf3d.getRotation(tfqt);
+
+				 tf::Transform transform;
+				 transform.setOrigin( tf::Vector3(handle_centroid(0), handle_centroid(1), handle_centroid(2)) );
+				 transform.setRotation(tfqt);
+
+				double r=-3.1415, p=0, y=0; // rotate 180° around x
+
+				q.setRPY(r, p, y);
+				transform.setRotation(q);
+
+				static tf::TransformBroadcaster br;
+				
+ 			        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "pico_flexx_optical_frame", "door_handle_frame"));
+
+
+				//std::cout<<z_vec(2)<<std::endl;
+
+				// ==================================DEFINE NEW COORDINATE SYSTEM =======================
 
 
 				*published_pc+= *template_pca;
@@ -412,9 +489,17 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 	}// endif
 	else
 	{
-		handle_point_cloud_ = published_pc;
-		ROS_WARN("No Cluster");
+
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr init (new pcl::PointCloud<pcl::PointXYZRGB>);
+		handle_point_cloud_ = init;
+
 	}
+
+
+
+
+
+
 		// ================================== FIND BEST TEMPLATE =================================================================
 }
 // end void callback
