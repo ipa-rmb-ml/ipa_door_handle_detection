@@ -1,0 +1,154 @@
+RF: All detected correctly
+
+TRAINING DB:
+781 pos
+466 neg
+
+TESTING DB:
+69  Pos
+117 Neg
+
+- verschiedene szenerie:
+lichtschlater, türen, wände, gänge
+
+
+LBF Feature extraction from depth frames: 
+Train Data Feature Extraction: 7.68783 sec
+Test Data Feature Extraction:  1.17701  sec
+
+
+=================RF======================================
+time training:
+Training time RF: 0.965275 sec
+
+time testing:
+Testing time per frame RF: 3.06452e-07 sec
+
+True Positive     : 69
+False Positive    : 0
+True Negative     : 117
+False Negative    : 0
+Accuracy          : 100
+Precision         : 100
+True negative rate: 100
+Recall            : 100
+==============================================================
+
+==========================SVM ===============================
+
+
+GRID SEARCH: POLY KERNEL
+
+        std::cout<<"Init Pixelgrid" << std::endl;
+        CvParamGrid CvParamGrid_C(pow(2.0,-5), pow(2.0,15), pow(2.0,2));
+        CvParamGrid CvParamGrid_gamma(pow(2.0,-15), pow(2.0,3), pow(2.0,2));
+        if (!CvParamGrid_C.check() || !CvParamGrid_gamma.check())
+             std::cout<<"The grid is NOT VALID."<< std::endl;
+        CvSVM svm;   
+        CvSVMParams paramz;
+        paramz.kernel_type = CvSVM::RBF;
+        paramz.svm_type = CvSVM::C_SVC;
+        paramz.term_crit = cvTermCriteria(CV_TERMCRIT_ITER,100,0.000001);
+
+
+	gamma:3.05176e-05
+	C:0.03125
+	Test: time per frame SVM: 0.00129104 sec
+	-----------------------------------------------------------------------
+	SVM Training Set Classification:
+	-----------------------------------------------------------------------
+	True Positive     : 0
+	False Positive    : 0
+	True Negative     : 117
+	False Negative    : 69
+	Accuracy          : 62.9032
+	Precision         : -nan
+	True negative rate: 100
+	Recall            : 0
+
+
+	LINEAR KERNEL:
+
+	Test Data Feature Extraction: 1.17476 sec
+	TrainSVM...
+	Test: time per frame SVM: 1.22903e-05 sec
+	-----------------------------------------------------------------------
+	SVM Training Set Classification:
+	-----------------------------------------------------------------------
+	True Positive     : 0
+	False Positive    : 0
+	True Negative     : 117
+	False Negative    : 69
+	Accuracy          : 62.9032
+	Precision         : -nan
+	True negative rate: 100
+	Recall            : 0
+
+============================================================
+
+==========================AB ===============================
+
+
+DISCRETE Adaboost OpenCV
+Gentle Adaboost,
+   params.boost_type = CvBoost::GENTLE;
+            params.weak_count =100;
+            params.weight_trim_rate = 0.95;
+            params.cv_folds = 0;
+            params.max_depth = 1;
+
+Train Time AB: 88.5594 sec
+Test: time per frame AB: 8.76989e-05 sec
+-----------------------------------------------------------------------
+AdaBoost Training Set Classification:
+-----------------------------------------------------------------------
+True Positive     : 69
+False Positive    : 117
+True Negative     : 0
+False Negative    : 0
+Accuracy          : 37.0968
+Precision         : 37.0968
+True negative rate: 0
+Recall            : 100
+
+
+Gentle Adaboost,
+   params.boost_type = CvBoost::GENTLE;
+            params.weak_count =100;
+            params.weight_trim_rate = 0.95;
+            params.cv_folds = 0;
+            params.max_depth = 1;
+
+	Train Time AB: 88.5594 sec
+	Test: time per frame AB: 8.76989e-05 sec
+	-----------------------------------------------------------------------
+	AdaBoost Training Set Classification:
+	-----------------------------------------------------------------------
+	True Positive     : 69
+	False Positive    : 117
+	True Negative     : 0
+	False Negative    : 0
+	Accuracy          : 37.0968
+	Precision         : 37.0968
+	True negative rate: 0
+	Recall            : 100
+
+
+	REAL ADABOOST:
+
+	Train Time AB: 88.3506 sec
+	Test: time per frame AB: 8.82366e-05 sec
+	-----------------------------------------------------------------------
+	AdaBoost Training Set Classification:
+	-----------------------------------------------------------------------
+	True Positive     : 69
+	False Positive    : 117
+	True Negative     : 0
+	False Negative    : 0
+	Accuracy          : 37.0968
+	Precision         : 37.0968
+	True negative rate: 0
+	Recall            : 100
+
+
+===========================================================

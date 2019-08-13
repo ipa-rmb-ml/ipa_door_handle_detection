@@ -46,6 +46,9 @@
 
 #include <boost/thread/mutex.hpp>
 
+#include <tf/transform_broadcaster.h>
+#include <ctime>
+
 // struct for storing point cloud plane information
 
 	struct planeInformation
@@ -96,6 +99,9 @@ public:
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr removeNoisefromPC(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,double dist);
 
+	void createKOSinROS(Eigen::Matrix4f pca_trafo,Eigen::Vector4f centroid, std::string kos_name);
+
+	void doEval(Eigen::Matrix4f cluster_trafo, Eigen::Matrix4f template_trafo, Eigen::Vector4f diff_trans);
 
 
 

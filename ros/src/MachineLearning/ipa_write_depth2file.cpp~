@@ -12,7 +12,7 @@ static const std::string OPENCV_WINDOW = "Image window";
 
 std::string img_path;
 int img_counter;
-std::string seq_num;
+int seq_num;
 
 class ImageConverter
    {

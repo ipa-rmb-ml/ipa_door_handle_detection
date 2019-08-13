@@ -2,18 +2,15 @@
 #include "TemplateMatching/ipa_door_handle_segmentation.h"
 #include "TemplateMatching/ipa_door_handle_template_alignment.h"
 
-
-#include <tf/transform_broadcaster.h>
-
-
-
 // init relevant paths, topics and nodes (see initCameraNode)
 StartHandleDetectionTM::StartHandleDetectionTM(ros::NodeHandle nh, sensor_msgs::PointCloud2::Ptr point_cloud_out_msg) :
 nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 {
+	// definition of camera links for ROS
 	std::string camera_link = "pico_flexx_optical_frame_link" ;
 	std::string PATH_TO_TEMPLATE_DIR = "/home/rmb-ml/Desktop/TemplateDataBase";
 
+	// path to the directory containing the templates for template matching
 	filePathXYZRGB_ = PATH_TO_TEMPLATE_DIR + "/templateDataXYZRGB/"; // only for testing -> change later
 	filePathPCATransformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataPCATrafo/";
 	filePathBBInformations_ = PATH_TO_TEMPLATE_DIR +"/templateDataBB/";
@@ -29,17 +26,19 @@ nh_(nh), point_cloud_out_msg_(point_cloud_out_msg)
 	max_handle_height_ = 5;
 	diag_BB3D_lim_ = 15;
 
-
 	initCameraNode(nh,point_cloud_out_msg);	
 }
-
-
 
 
 // MAIN CALCULATION GOES BELOW
 void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2::ConstPtr& point_cloud_msg)
 {
 		
+ // start clock 
+    std::clock_t start;
+    double duration;
+    start = std::clock();
+
 	pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
 
 	//create new point cloud in pcl format: pointcloud_in_pcl_format
@@ -49,8 +48,6 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 	//transform imported pointcloud point_cloud_msg to pointcloud_in_pcl_format
 	pcl::fromROSMsg(*point_cloud_msg, *pointcloud_in_pcl_format);
-
-
 	
 	// ==================== ACTUAL CALCULATION:START ==========================================================================================================
 
@@ -64,7 +61,11 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 	// create segmentation object
 	PointCloudSegmentation segObj;
-
+	Eigen::Vector4f handle_centroid;
+	Eigen::Vector4f cluster_centroid;
+	Eigen::Vector4f cluster_pca_centroid;
+	Eigen::Vector4f template_centroid_pca;
+	Eigen::Matrix4f cluster_pca_trafo;
 
 	// performes plane detection to return plane coefficients and model inliers in a struct 
 	planeInformation planeData = segObj.detectPlaneInPointCloud(pointcloud_in_pcl_format);
@@ -72,11 +73,12 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 	point_cloud_scenery_ = pointcloud_in_pcl_format;
 	
-
 	// coeff based distance calculation
 	double dist = double (plane_coefficients->values[3]);
 	bool is_door_plane;
 
+	// check if there is any doorplane in relevant distance
+	// continue with detection only if there ist a valid plane 
 	if (fabs(dist) < 0.5 || fabs(dist) > 0.9 )
 	{
 	  is_door_plane = 0;
@@ -87,15 +89,15 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 	{
 	 is_door_plane = 1;
 	// noise removal from point cloud
-	// removes points from the point cloud in a specific range
+	// removing noise from point cloud
+	// especially relevant for noisy door including glas elements
 	point_cloud_scenery_ = segObj.removeNoisefromPC(point_cloud_scenery_,dist); // filtered pc
 	};
 
-	// the determined clusters are stores inside a  vector structure
-	// the actual involves a few steps, for detailed explanation see the segmentPointCloud() function
+	// segmentation steps to determine relevant clusters as door handle candidates 
+	// cluster point clouds are stored inside a vector structure-> vector of clusters
 	std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr,
 	Eigen::aligned_allocator<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> > cluster_vec = segObj.segmentPointCloud(point_cloud_scenery_);
-
 
 	//================SUMMARY======================
 	// After the door plane detection all relevant points are supposed to be clustered usind a region growing appoach. Therefor all clusters in front of the plane 
@@ -120,27 +122,24 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 	std::vector<std::string> best_handle_type_vec;
 
 	Eigen::Matrix4f final_transformation;
-
 	std::vector<std::string> handle_type_name_vec;
-
 
 	// ==================================================ITERATION OVER CLUSTERS ===============================================
 
-
+	// only if cluster vector is not empty --> contains possible door handles
 	if (cluster_vec.size () > 0 && is_door_plane)
 	{
 
 		// performs the iteration over the cluster vector to check each of the stored point clouds
 		for (int num_cluster = 0; num_cluster < cluster_vec.size (); ++num_cluster) // 
 		{
-
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster = cluster_vec[num_cluster];		
 
 			// estimate preconditio
 			// get min max 
 
-
-			// precondition: if the cluster does not fit geometrical constrains 
+			// precondition: GEOMETRIC constrains
+			// checking width, lenght and height and cluster to skip candidates due to dimension
 			pcl::PointXYZRGB minPt, maxPt;
 			pcl::getMinMax3D (*cluster, minPt, maxPt);
 
@@ -148,7 +147,6 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 			double diff_x = fabs(maxPt.x-minPt.x)*100; // in cm
 			double diff_y = fabs(maxPt.y-minPt.y)*100; // in cm
 			double diff_z = fabs(maxPt.z-minPt.z)*100; // in cm
-
 
 			// if the cluster does not fit the constrains, skip and proceed with next one
 			if (diff_x > max_handle_lenght_ && diff_y > max_handle_height_ && diff_z > max_handle_width_ )
@@ -160,13 +158,13 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 			// downsampling the pointcloud to reduce the number of points using a voxel grid
 			// in our use case not mandatory since the cluster candidates got usually a point num < 300
-
 			//cluster = featureObj.downSamplePointCloud(cluster);
 
 			// PCA calculation to transform the cluster the the origin and use the eigenvectors for orientation -> highest covariance along x axis (lenght)
 			pcaInformation pcaData =  segObj.calculatePCA(cluster);
 
-			Eigen::Matrix4f cluster_pca_trafo = pcaData.pca_transformation;
+			// struct storing pca information
+			cluster_pca_trafo = pcaData.pca_transformation;
 			Eigen::Vector3f bb_3D_cluster = pcaData.bounding_box_3D;
 			
 			// calculation of the Bound Box diagonal given by the PCA
@@ -192,9 +190,21 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 			// apply transformation on assumed handle cloud to place it in the orgin and rotate based on EVs
 			pcl::transformPointCloud (*cluster, *cluster_pca, cluster_pca_trafo);
 
+			// define KOS for template and cluster and compare the orientation
+
+		// ====================================== CLUSTER INFORMATION =================================================================== 
+	
+			pcl::compute3DCentroid(*cluster, cluster_centroid);
+			pcl::compute3DCentroid(*cluster_pca,cluster_pca_centroid);
+
+			// create and drow KOS in ROS to visualize orientation and rotation
+			segObj.createKOSinROS(cluster_pca_trafo,cluster_centroid,"cluster_KOS");;
+
+			// ====================================== CLUSTER INFORMATION =================================================================== 
+
 			cluster_pca_best_vec.push_back(cluster_pca); // so
 
-			// depending on the BB size decide in which directory 
+			//depending on the BB size decide in which directory 
 			Eigen::Vector3f cam_axis;
 			cam_axis << 0,0,1;
 
@@ -218,19 +228,14 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 			int dist = -plane_coefficients->values[3]*100; // to cm
 
-
-			int r = 0;
-			int g = 0;
-			int b = 255;
-
-
 			// ============================================================================================
 
-			pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_pca_rgb = segObj.changePointCloudColor(cluster_pca,r,g,b);
+			pcl::PointCloud<pcl::PointXYZRGB>::Ptr cluster_pca_rgb = segObj.changePointCloudColor(cluster_pca,0,0,255);
 
 			*published_pc+= *cluster_pca_rgb;
 
 			// obtain path information based on orientation params
+			// based on determined distance and orientation parameter --> subfolder to load templates from 
 			std::string name_pcd = FeatureCloudGeneration::getFilePathFromParameter(dist,angle_XZ,angle_YZ);
 
 			// struct containing two vectors 
@@ -247,7 +252,6 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 			if (template_vec_xyz.size() == 0)
 			{
-			
 				continue;
 			}
 
@@ -257,13 +261,8 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 			// ===================== CLASSIFICATION ==========================
 
 			// ================================== ITERATION OVER TEMPLATES =============================================================
-
-		
-			// if there is no proper door_distance do not match the templates
 			
-
-
-
+			// iterate over loaded templates to estimate best fit 
 			for (int num_template = 0; num_template < template_vec_xyz.size(); ++num_template) // template loop
 				{
 					if (cluster_vec[num_cluster]->points.size() > 0)
@@ -271,24 +270,19 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 						    // can be used for normals and feature based matching
 							// in this method the coordinated based alignment is used -> ICP
-
 							//pcl::PointCloud<pcl::Normal>::Ptr template_normals = template_vec_normals[num_template];
 							//pcl::PointCloud<pcl::FPFHSignature33>::Ptr template_features = template_vec_features[num_template];
-
-
+						
 							// temporary storage 
 							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca = template_vec_xyz[num_template];
 							Eigen::Matrix4f pca_template =	 template_pca_trafo_vec[num_template]; // rotation and translatoion to origin
 							std::string template_type = handle_type_name_vec[num_template];
 
-
 							// Eigen::Matrix4f pca_assumed -> rotation and translation to origin
 							// find rot btw PCA's coordinates systems
 							//  template * R = assumed
 							// R = assumed * template^T;
-
-
-							
+						
 							// ============ PCA TRAFO ============
 							Eigen::Matrix4f transform_hndl;
 							transform_hndl.setIdentity();
@@ -319,13 +313,32 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 
 							pcl::transformPointCloud (*template_pca,*template_pca, icp_transformation);
 
+							// compute templates centroid & orientation
+							Eigen::Vector4f template_centroid;
+							pcl::compute3DCentroid(*template_pca, template_centroid);
+
+							Eigen::Vector4f diff_trans = cluster_pca_centroid-template_centroid;
+							// write centroid diff to file btw template and cluster
+
+
+						// for evaluation purposes to estimate translation btw template & cluster as well as difference in orientation
+						if (num_template == 1 )
+						{
+							segObj.doEval(cluster_pca_trafo,pca_template,diff_trans);
+						}
+	
+							// creating KOS for the template
+							segObj.createKOSinROS(pca_template,template_centroid,"template_KOS");
+
+							
+							// CALCULATE TEMPLATE KOS HERE
 							// ============ICP  ============
 
-							int r = 255;
-							int g = 0;
-							int b = 0;
+							int red = 255;
+							int green = 0;
+							int blue = 0;
 
-							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca_rgb = segObj.changePointCloudColor(template_pca,r,g,b);
+							pcl::PointCloud<pcl::PointXYZRGB>::Ptr template_pca_rgb = segObj.changePointCloudColor(template_pca,red,green,blue);
 
 							// correspondence estimation btw cluster and template and calculation of the ration of registered point to all points in cluster
 							double points_ratio = featureObj.estimateCorrespondences(cluster_pca, template_pca,max_dist_1_,overlap_ratio_);
@@ -351,8 +364,6 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 								}
 						}	//end if cluster size > 0
 				} // end for over templates
-
-
 
 			// ================================================= ITERATION OVER TEMPLATES ===============================================	
 
@@ -385,33 +396,25 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 				template_pca = template_pca_best_vec[pos];
 				std::string best_fit_name = best_handle_type_vec[pos];
 
-				//x_axis_temp = 
-				//x_axis_clust
-
-
 				pcl::PointCloud<pcl::PointXYZRGB>::Ptr pc_filt(new pcl::PointCloud<pcl::PointXYZRGB>);
 				pcl::PointXYZRGB pp_filt;
 
 			if (template_pca->points.size() > 0)
 			{
 
-				icpInformation icp_data_nest_fit = featureObj.icpBasedTemplateAlignment(cluster_pca,template_pca);
-
-				double fitness_score = icp_data_nest_fit.icp_fitness_score;
-				Eigen::Matrix4f icp_transformation_best_fit = icp_data_nest_fit.icp_transformation;
-
-				pcl::transformPointCloud (*template_pca,*template_pca, icp_transformation_best_fit);
+				//icpInformation icp_data_nest_fit = featureObj.icpBasedTemplateAlignment(cluster_pca,template_pca);
+				//ouble fitness_score = icp_data_nest_fit.icp_fitness_score;
+				//Eigen::Matrix4f icp_transformation_best_fit = icp_data_nest_fit.icp_transformation;
+				//pcl::transformPointCloud (*template_pca,*template_pca, icp_transformation_best_fit);
 
 				// B  Distance --> paper
 				std::cout<<"======================================================"<<std::endl;
 				ROS_WARN("Door Handle detected!");
 				std::cout<<"Door Handle Type: " << best_fit_name <<std::endl;
 				
-				//
 				handle_point_cloud_ = assumed_handle_point_cloud;
 
 				// centroid calculation
-				Eigen::Vector4f handle_centroid;
 
 				pcl::compute3DCentroid(*handle_point_cloud_, handle_centroid);
 
@@ -421,67 +424,24 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 				std::cout<<"Z:"<<handle_centroid(2)<<std::endl;
 				std::cout<<"======================================================"<<std::endl;
 
-
-
-
-				// ==================================DEFINE NEW COORDINATE SYSTEM =======================
-				// origin at door handles centroid
-				// orientation defined by eigenvectors
-
-				pcaInformation pcaData =  segObj.calculatePCA(assumed_handle_point_cloud);
-
-				Eigen::Matrix4f handle_pca = pcaData.pca_transformation;
-
-
-				// put into function
-
-				// define new coordinate system placed at the orgin of the centroids defined by the EVs
-				Eigen::Vector3f x_vec  = handle_pca.block<3,1>(0,0); // placed along the EV pointing in the direction with the highest variance
-				Eigen::Vector3f y_vec  = handle_pca.block<3,1>(0,1);
-				Eigen::Vector3f z_vec  = handle_pca.block<3,1>(0,2);
-
-				tf::Matrix3x3 tf3d;
-				tf3d.setValue(static_cast<double>(handle_pca(0,0)), static_cast<double>(handle_pca(0,1)), static_cast<double>(handle_pca(0,2)), 
-					static_cast<double>(handle_pca(1,0)), static_cast<double>(handle_pca(1,1)), static_cast<double>(handle_pca(1,2)), 
-					static_cast<double>(handle_pca(2,0)), static_cast<double>(handle_pca(2,1)), static_cast<double>(handle_pca(2,2)));
-
-				 tf::Quaternion tfqt;
- 				 tf::Quaternion q;
-
-
-				 tf3d.getRotation(tfqt);
-
-				 tf::Transform transform;
-				 transform.setOrigin( tf::Vector3(handle_centroid(0), handle_centroid(1), handle_centroid(2)) );
-				 transform.setRotation(tfqt);
-
-				double r=-3.1415, p=0, y=0; // rotate 180° around x
-
-				q.setRPY(r, p, y);
-				transform.setRotation(q);
-
-				static tf::TransformBroadcaster br;
-				
- 			        br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "pico_flexx_optical_frame", "door_handle_frame"));
-
-
-				//std::cout<<z_vec(2)<<std::endl;
-
-				// ==================================DEFINE NEW COORDINATE SYSTEM =======================
-
+				// ==================================DEFINE NEW COORDINATE SYSTEM ======================
 
 				*published_pc+= *template_pca;
+
+				duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+				std::cout<<"Detection time: " << duration << " sec"<< std::endl;
 
 
 			} // end if check
 			// ===============================================FIND BEST TEMPLATE ===================================================
-
 		}
 			// publish point cloud in rviz
 			*published_pc+= *template_pca;
 			pcl::toROSMsg(*published_pc, *point_cloud_out_msg_);
 			point_cloud_out_msg_->header.frame_id = CAMERA_LINK;
 			pub1_.publish(point_cloud_out_msg_);	
+
+
 
 	}// endif
 	else
@@ -491,11 +451,6 @@ void StartHandleDetectionTM::pointcloudCallback_1(const sensor_msgs::PointCloud2
 		handle_point_cloud_ = init;
 
 	}
-
-
-
-
-
 
 		// ================================== FIND BEST TEMPLATE =================================================================
 }
@@ -566,5 +521,117 @@ void StartHandleDetectionTM::initCameraNode(ros::NodeHandle nh, sensor_msgs::Poi
 	if (!ros::ok()){
 		std::cout << "Quit publishing" << std::endl;
 	}
-	std::cout << "StartHandleDetection Constructor Initialised." << std::endl;
+	std::cout << "StartHandleDetection Constructor Initialised." << std::endl;  
 }
+
+// EVALUATION
+// check code - for evaluation
+// translation error
+// number of registered points
+// time for door handle detection
+// number of detected door handles in one ROS BAG
+// problems: reflection: door handle, glas etc
+
+// classification 
+// duration for one frame classification
+// param grid for SVM 
+// time for one frame classification -> argument to decied whether door & handle -> perform detection
+
+/* 
+
+for(it_detectResult = m_DetectionResults.begin(); it_detectResult != m_DetectionResults.end(); it_detectResult++)
+                                                                {
+                                                                        // Get transformation
+                                                                        ipa_Utils::Vector3d translation;
+                                                                        cv::Mat detected_rot_3x3 = cv::Mat::zeros(3, 3, CV_64FC1);
+
+                                                                        translation[0] = it_detectResult->m_tx;
+                                                                        translation[1] = it_detectResult->m_ty;
+                                                                        translation[2] = it_detectResult->m_tz;
+
+                                                                        ipa_Utils::Vec7d vec7_CfromO(
+                                                                        it_detectResult->m_tx,
+                                                                        it_detectResult->m_ty,
+                                                                        it_detectResult->m_tz,
+                                                                        it_detectResult->m_q1, // rw
+                                                                        it_detectResult->m_q2, // rx
+                                                                        it_detectResult->m_q3, // ry
+                                                                        it_detectResult->m_q4); // rz
+
+                                                                        cv::Mat frame_CfromO = ipa_Utils::Vec7ToFrame(vec7_CfromO);
+
+                                                                        for (int k = 0; k < 9; k++)
+                                                                        {
+                                                                                detected_rot_3x3.at<double>(k % 3, k / 3) = frame_CfromO.at<double>(k % 3, k / 3);
+                                                                        }
+
+                                                                        ipa_Utils::Vector3d trans(real_trans.at<double>(0) - translation[0], real_trans.at<double>(1) - translation[1], real_trans.at<double>(2) - translation[2]);
+                                                                        double d_new = trans.Length();
+
+                                                                        cv::Mat R_tilde_transponiert_R = real_rot_3x3.t()*detected_rot_3x3;
+                                                                        double theta_new = (std::acos(0.5*( (double)(cv::trace(R_tilde_transponiert_R).val[0] - 1.) )))*180./CV_PI;
+
+
+                                                                        // Save smallest error in chart
+                                                                        bool save = false;
+                                                                        if(d_new < d) // Wenn Translationsfehler geringer, speichern
+                                                                                save = true;
+                                                                        else // Wenn Translationsfehler nicht geringer, aber...
+                                                                                if(d_new == d && theta_new < theta) // genau gleich gross ist und dabei der Rotationsfehler jedoch geringer ist, speichern
+                                                                                        save = true;
+                                                                        //if(save)
+                                                                        //{
+                                                                        //      d = d_new;
+                                                                        //      theta = theta_new;
+                                                                        //      if(it_detectResult->m_ObjectName == object.name)
+                                                                        //              best_d_theta_belongs2correctObject = true;
+                                                                        //      else
+                                                                        //              best_d_theta_belongs2correctObject = false;
+                                                                        //}
+
+
+                                                                        // Determine group of detected object (TP, FP, FN)
+                                                                        if(it_detectResult->m_ObjectName == object.name)
+                                                                        {
+                                                                                if(d_new < 0.5*object.diameter && theta_new < 45.)
+                                                                                {
+                                                                                        h_tp++;
+                                                                                        if(save)
+                                                                                        {
+                                                                                                d = d_new;
+                                                                                                theta = theta_new;
+                                                                                                best_d_theta_belongs2correctObject = true;
+                                                                                        }
+                                                                                }
+                                                                                else
+                                                                                        h_fp++;
+                                                                        }
+                                                                        else
+                                                                                h_fp++;
+
+                                                                        //if(d_new < 0.5*object.diameter && theta_new < 45.)
+                                                                        //{
+                                                                        //      if(it_detectResult->m_ObjectName == object.name)
+                                                                        //              h_tp++;
+                                                                        //      else
+                                                                        //              h_fp++;
+                                                                        //}
+                                                                        //else
+                                                                        //      h_fn++;
+                                                                }
+
+                                                                chart_txt
+                                                                        << evalIt->path_.leaf().string()                                                        // Testcase
+                                                                        << "\t" << object.name                                                                          // Object
+                                                                        << "\t" << object.diameter                                                                      // Diameter
+                                                                        << "\t" << view_degree                                                                          // View
+                                                                        << "\t" << total_objects_detected                                                       // Objects detected (Total)
+                                                                        << "\t" << (h_tp > 0 ? 1 : 0)   // Saturation auf max. 1        // h_tp
+                                                                        << "\t" << h_fp
+                                                                        //<< "\t" << h_fn
+                                                                        << "\t" << (best_d_theta_belongs2correctObject ? d : -1)        // d
+                                                                        << "\t" << (best_d_theta_belongs2correctObject ? theta : -1)//theta
+                                                                        << "\t" << (best_d_theta_belongs2correctObject ? "yes" : "no")
+                                                                        << "\t" << detection_time
+                                                                        << std::endl; // Flush File and creat newline
+ }*/

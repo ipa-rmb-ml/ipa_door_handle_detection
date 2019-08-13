@@ -517,3 +517,78 @@ pcaInformation PointCloudSegmentation::calculatePCA(pcl::PointCloud<pcl::PointXY
 
 		return output_cloud1;
 	}
+
+	void PointCloudSegmentation::createKOSinROS(Eigen::Matrix4f cluster_pca_trafo,Eigen::Vector4f cluster_centroid, std::string cluster_kos_name)
+	{
+		// PUT TO FUNCTION 			
+		tf::Matrix3x3 tf3d_cluster;
+		tf3d_cluster.setValue(static_cast<double>(cluster_pca_trafo(0,0)), static_cast<double>(cluster_pca_trafo(0,1)), static_cast<double>(cluster_pca_trafo(0,2)), 
+		static_cast<double>(cluster_pca_trafo(1,0)), static_cast<double>(cluster_pca_trafo(1,1)), static_cast<double>(cluster_pca_trafo(1,2)), 
+		static_cast<double>(cluster_pca_trafo(2,0)), static_cast<double>(cluster_pca_trafo(2,1)), static_cast<double>(cluster_pca_trafo(2,2)));
+
+		tf::Quaternion tfqt;
+ 		tf::Quaternion q;
+
+		tf3d_cluster.getRotation(tfqt);
+		tf::Transform transform;
+		transform.setOrigin( tf::Vector3(cluster_centroid(0), cluster_centroid(1), cluster_centroid(2)) );
+		transform.setRotation(tfqt);
+
+		double r=-3.1415, p=0, y=0; // rotate 180° around x
+
+		q.setRPY(r, p, y);
+		transform.setRotation(q);
+
+		static tf::TransformBroadcaster br;		
+ 		br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "pico_flexx_optical_frame", cluster_kos_name));
+
+	}
+
+void PointCloudSegmentation::doEval(Eigen::Matrix4f cluster_pca_trafo, Eigen::Matrix4f pca_template, Eigen::Vector4f diff_trans)
+{
+							std::ofstream x_Diff;
+							std::ofstream y_Diff;
+							std::ofstream z_Diff;
+							std::ofstream norm;
+							std::ofstream rot;
+
+							x_Diff.open ("x_Diff.txt",std::ios_base::app);
+							x_Diff << diff_trans(0)*1000 <<"\n";
+
+							y_Diff.open ("y_Diff.txt",std::ios_base::app);
+							y_Diff << diff_trans(1)*1000 <<"\n";
+						
+							z_Diff.open ("z_Diff.txt",std::ios_base::app);
+							z_Diff << diff_trans(2)*1000 <<"\n";
+
+							double trans_err = sqrt(diff_trans(0) * diff_trans(0) + diff_trans (1) * diff_trans (1) + diff_trans (2)* diff_trans (2));
+
+							norm.open ("Norm_diff.txt",std::ios_base::app);
+							norm << trans_err * 1000 <<"\n";
+
+							Eigen::Matrix3f cluster_rot = cluster_pca_trafo.block<3,3>(0,0);
+							Eigen::Matrix3f template_rot = pca_template.block<3,3>(0,0);			
+
+							std::cout<<"X_diff:" << diff_trans(0)*1000<< " mm"<< std::endl;
+							std::cout<<"Y_diff:" << diff_trans(1)*1000<< " mm"<< std::endl;
+							std::cout<<"Z_diff" << diff_trans(2)*1000 << " mm"<< std::endl;
+							std::cout<<"Norm: " << trans_err * 1000 << " mm"<< std::endl;
+
+							//write translation error to txt
+							// X txt
+							// Y txt 
+							// Z txt
+							// norm txt
+
+							//write rotation error to txt
+
+							Eigen::Matrix3f cluster_template_R_trans = template_rot.transpose()*cluster_rot;
+
+							double theta_new = std::acos(0.5*(template_rot.trace() - 1))*180/CV_PI;
+							rot.open ("Rot_angle.txt",std::ios_base::app);
+							rot << theta_new  <<"\n";
+							std::cout<<"Theta: " << theta_new << " °"<< std::endl;
+
+							std::cout<<cluster_template_R_trans<<std::endl;
+							std::cout<<cluster_template_R_trans.trace() - 1<<std::endl;
+}
